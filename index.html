@@ -196,22 +196,30 @@
                     }
                 },
 
-                // --- 强制检查函数 (通用检查) ---
+                // --- 强制检查函数 (通用检查) ---                
+                // --- 强制检查函数 (通用检查 - 最终优化版) ---
                 async forceCheckWallet() {
+                    // 确保 this.$nextTick 存在，这是 Alpine.js 提供的函数
+                    const nextTick = window.Alpine ? window.Alpine.nextTick : (callback) => setTimeout(callback, 0);
+                
                     if (window.tronWeb && window.tronWeb.ready) {
                         const currentAddr = window.tronWeb.defaultAddress.base58;
-
-                        // 只有当检测到的地址与当前记录的地址不一致时，才更新状态和余额
-                        if (this.wallet !== currentAddr) {
+                
+                        if (currentAddr && currentAddr !== this.wallet) {
                             this.wallet = currentAddr;
                             this.btnText = "已连接";
-                            try {
-                                const bal = await window.tronWeb.trx.getBalance(this.wallet);
-                                this.balance = (bal / 1e6).toFixed(2);
-                            } catch(e) {
-                                this.balance = '?.??';
-                                console.error("无法获取余额:", e);
-                            }
+                            
+                            // 使用 $nextTick 确保 DOM 在数据更新后刷新
+                            await nextTick(async () => { 
+                                try {
+                                    const bal = await window.tronWeb.trx.getBalance(this.wallet);
+                                    this.balance = (bal / 1e6).toFixed(2);
+                                    console.log(`Connection established and DOM updated to: ${currentAddr}`);
+                                } catch(e) {
+                                    this.balance = '?.??';
+                                    console.error("无法获取余额:", e);
+                                }
+                            });
                         }
                     } else {
                         // 如果 window.tronWeb 不存在或未准备好，重置本地状态
@@ -219,60 +227,12 @@
                             this.wallet = '';
                             this.balance = '0.00';
                             this.btnText = "连接钱包";
+                            console.log("Connection reset.");
                         }
                     }
                 },
 
-                // 🌟 优化的通用连接入口 (带超时重置) 🌟
-                async connectWallet() {
-                    this.stopPolling(); // 尝试连接前先停止轮询，防止干扰
-                    
-                    this.walletSelectModalOpen = false;
-                    this.btnText = "连接中...";
-                    
-                    if (!window.tronWeb) {
-                        alert("未检测到 TronLink 钱包插件。请确保您已安装并切换到 TRON 网络。");
-                        this.btnText = "连接钱包";
-                        return;
-                    }
-                    
-                    this.startPolling(); // 重新启动轮询
-                    
-                    try {
-                        // 1. 请求连接/授权，弹窗在此刻弹出
-                        await window.tronWeb.request({ method: 'tron_requestAccounts' }); 
-                        
-                        this.btnText = "等待授权/解锁...";
-                        
-                        // 2. 增加延迟和超时检查 (最多等待 5 秒)
-                        let checkCount = 0;
-                        const maxChecks = 10; 
-                        
-                        this.forceCheckWallet(); 
-
-                        while (!this.wallet && checkCount < maxChecks) {
-                            await delay(500); 
-                            this.forceCheckWallet();
-                            checkCount++;
-                        }
-                        
-                        if (!this.wallet) {
-                             // 如果等待超时仍未连接
-                            this.btnText = "连接钱包";
-                            alert("钱包连接超时或用户取消授权。请检查您的 TronLink 插件是否已解锁。");
-                            this.stopPolling(); 
-                        } else {
-                            console.log("Wallet connected successfully after authorization.");
-                            // 连接成功后，forceCheckWallet() 会更新 this.btnText 为 "已连接"
-                        }
-
-                    } catch(e) {
-                        console.error("连接请求失败:", e.message);
-                        this.btnText = "连接钱包";
-                        alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
-                        this.stopPolling(); 
-                    }
-                },
+                
 
                 // --- 断开钱包 (通用) ---
                 disconnect() {
