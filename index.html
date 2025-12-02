@@ -15,12 +15,7 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        bg: '#0f111a',
-                        surface: '#1e212b',
-                        primary: '#8b5cf6',
-                        secondary: '#10b981',
-                    }
+                    colors: { bg: '#0f111a', surface: '#1e212b', primary: '#8b5cf6', secondary: '#10b981' }
                 }
             }
         }
@@ -42,13 +37,14 @@
             <i class="fa-solid fa-cube text-primary"></i> Tron<span class="text-white">Luck</span>
         </div>
         
-        <!-- 未连接：点击打开钱包选择弹窗 -->
+        <!-- 未连接 -->
         <button x-show="!wallet" @click="walletModalOpen = true" 
             class="text-xs bg-primary hover:bg-purple-600 text-white border border-purple-500 rounded-full px-4 py-1.5 flex items-center gap-2 transition active:scale-95 shadow-lg">
-            <i class="fa-solid fa-wallet"></i> 连接钱包
+            <div x-show="isLoading" class="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></div>
+            <span x-text="isLoading ? '连接中...' : '连接钱包'"></span>
         </button>
 
-        <!-- 已连接：显示余额 + 地址 + 断开 -->
+        <!-- 已连接 -->
         <div x-show="wallet" class="flex items-center gap-2 bg-surface border border-gray-700 rounded-full pl-3 pr-1 py-1">
             <div class="flex items-center gap-1">
                 <span class="text-green-400 font-bold text-xs" x-text="balance">0</span>
@@ -65,7 +61,7 @@
     <!-- 主内容区 -->
     <main class="flex-1 overflow-y-auto pt-16 pb-24 px-4 no-scrollbar space-y-8">
         
-        <!-- ================= 🏠 1. 首页 (Home) - 内容已恢复 ================= -->
+        <!-- ================= 🏠 1. 首页 (Home) ================= -->
         <div x-show="activeTab === 'home'" x-transition.opacity class="space-y-8">
             <div class="text-center py-8">
                 <div class="inline-block px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold mb-4 border border-primary/30">🚀 波场 0 Gas 游戏金融协议</div>
@@ -80,7 +76,7 @@
                 </div>
             </div>
 
-            <!-- 核心优势 (已找回) -->
+            <!-- 核心优势 -->
             <div>
                 <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-shield-halved text-green-400"></i> 安全与透明
@@ -99,24 +95,19 @@
                 </div>
             </div>
 
-            <!-- 发展路线图 (已找回) -->
+            <!-- 路线图 -->
             <div>
                 <h3 class="font-bold text-lg mb-4">🗺️ 发展路线图</h3>
                 <div class="space-y-0 relative border-l border-gray-700 ml-3">
                     <div class="mb-6 ml-6 relative">
                         <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-primary border-2 border-bg"></span>
-                        <h4 class="font-bold text-white text-sm">Phase 1: 协议启动 (进行中)</h4>
-                        <p class="text-xs text-gray-500">上线哈希猜单双，部署众筹合约，开启 0 Gas 体验。</p>
+                        <h4 class="font-bold text-white text-sm">Phase 1: 协议启动</h4>
+                        <p class="text-xs text-gray-500">上线哈希猜单双，部署众筹合约。</p>
                     </div>
                     <div class="mb-6 ml-6 relative">
                         <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-gray-600 border-2 border-bg"></span>
                         <h4 class="font-bold text-gray-400 text-sm">Phase 2: SunPump 发币</h4>
-                        <p class="text-xs text-gray-500">发行治理代币，开启积分空投，上架交易所。</p>
-                    </div>
-                    <div class="ml-6 relative">
-                        <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-gray-600 border-2 border-bg"></span>
-                        <h4 class="font-bold text-gray-400 text-sm">Phase 3: 生态扩张</h4>
-                        <p class="text-xs text-gray-500">上线更多哈希游戏，启动 DAO 治理。</p>
+                        <p class="text-xs text-gray-500">发行治理代币，开启积分空投。</p>
                     </div>
                 </div>
             </div>
@@ -189,13 +180,13 @@
             <button @click="walletModalOpen=false" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
             <h3 class="text-xl font-bold mb-6 text-center">选择钱包连接</h3>
             <div class="space-y-3">
-                <button @click="performConnect('TronLink')" class="w-full flex items-center justify-between bg-gray-800 hover:bg-gray-700 p-4 rounded-xl transition border border-gray-700"><div class="flex items-center gap-3"><img src="https://cdn.worldvectorlogo.com/logos/tronlink-logo.svg" class="w-8 h-8 rounded-full bg-white p-1"><div class="text-left"><div class="font-bold">TronLink</div><div class="text-[10px] text-gray-400">波场官方推荐</div></div></div><i class="fa-solid fa-chevron-right text-gray-600"></i></button>
-                <button @click="performConnect('TokenPocket')" class="w-full flex items-center justify-between bg-gray-800 hover:bg-gray-700 p-4 rounded-xl transition border border-gray-700"><div class="flex items-center gap-3"><img src="https://www.tokenpocket.pro/logo.png" class="w-8 h-8 rounded-full"><div class="text-left"><div class="font-bold">TokenPocket</div><div class="text-[10px] text-gray-400">通用多链钱包</div></div></div><i class="fa-solid fa-chevron-right text-gray-600"></i></button>
+                <button @click="startConnect('TronLink')" class="w-full flex items-center justify-between bg-gray-800 hover:bg-gray-700 p-4 rounded-xl transition border border-gray-700"><div class="flex items-center gap-3"><img src="https://cdn.worldvectorlogo.com/logos/tronlink-logo.svg" class="w-8 h-8 rounded-full bg-white p-1"><div class="text-left"><div class="font-bold">TronLink</div><div class="text-[10px] text-gray-400">波场官方推荐</div></div></div><i class="fa-solid fa-chevron-right text-gray-600"></i></button>
+                <button @click="startConnect('TokenPocket')" class="w-full flex items-center justify-between bg-gray-800 hover:bg-gray-700 p-4 rounded-xl transition border border-gray-700"><div class="flex items-center gap-3"><img src="https://www.tokenpocket.pro/logo.png" class="w-8 h-8 rounded-full"><div class="text-left"><div class="font-bold">TokenPocket</div><div class="text-[10px] text-gray-400">通用多链钱包</div></div></div><i class="fa-solid fa-chevron-right text-gray-600"></i></button>
             </div>
         </div>
     </div>
 
-    <!-- 游戏详情弹窗 -->
+    <!-- 游戏弹窗 -->
     <div x-show="gameModalOpen" class="fixed inset-0 z-[60] bg-bg flex flex-col" x-transition>
         <div class="h-14 px-4 flex items-center justify-between border-b border-gray-800 bg-surface">
             <button @click="gameModalOpen = false" class="text-gray-400"><i class="fa-solid fa-arrow-left"></i> 返回</button>
@@ -236,30 +227,84 @@
                 balance: '0.00',
                 betAmount: 10,
                 investAmount: '',
+                isLoading: false,
                 config: CONFIG,
                 
                 init() {
-                    // 初始化时，如果缓存有记录，尝试自动连一次
-                    if(localStorage.getItem('tron_connected') === 'true') {
-                        let attempts = 0;
-                        const timer = setInterval(() => {
-                            attempts++;
-                            if (window.tronWeb && window.tronWeb.ready) {
-                                this.updateWalletState();
-                                clearInterval(timer);
-                            }
-                            if (attempts > 20) clearInterval(timer);
-                        }, 500);
+                    // 初始化时，如果缓存显示已连接，则进入“静默等待模式”
+                    if(localStorage.getItem('isConnected') === 'true') {
+                        this.waitForInjection();
                     }
+                    
                     window.addEventListener('message', (e) => {
-                        if (e.data.message && e.data.message.action == "accountsChanged") this.updateWalletState();
+                        if (e.data.message && e.data.message.action == "accountsChanged") {
+                            this.fetchWalletInfo();
+                        }
                     });
                 },
 
-                async updateWalletState() {
+                // --- 1. 等待钱包注入 (刷新页面后) ---
+                waitForInjection() {
+                    let attempts = 0;
+                    // 每500毫秒检查一次，最多查20次（10秒）
+                    const timer = setInterval(() => {
+                        if (window.tronWeb && window.tronWeb.ready) {
+                            clearInterval(timer);
+                            this.fetchWalletInfo();
+                        }
+                        if (attempts++ > 20) clearInterval(timer);
+                    }, 500);
+                },
+
+                // --- 2. 手动点击连接 ---
+                async startConnect(provider) {
+                    this.walletModalOpen = false;
+                    this.isLoading = true;
+
+                    // 检查是否安装插件
+                    if (!window.tronWeb) {
+                        alert("未检测到钱包插件，请安装 " + provider + " 并刷新页面");
+                        this.isLoading = false;
+                        return;
+                    }
+
+                    // 尝试请求授权
+                    try {
+                        const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                        // 无论返回什么，只要不报错，我们就开始“死等” ready 状态
+                        // 因为有时候 res.code 不是 200，但其实已经连上了
+                        this.waitForReady(); 
+                    } catch(e) {
+                        // 即使报错 (比如 "Already connected")，也可能是成功的，尝试检查 ready
+                        this.waitForReady();
+                    }
+                },
+
+                // --- 3. 死等 Ready 状态 (核心修复) ---
+                waitForReady() {
+                    let attempts = 0;
+                    const timer = setInterval(() => {
+                        if (window.tronWeb && window.tronWeb.ready) {
+                            clearInterval(timer);
+                            this.fetchWalletInfo();
+                            this.isLoading = false;
+                        } else {
+                            // 如果尝试了 5秒 还没好，才提示失败
+                            if (attempts++ > 10) {
+                                clearInterval(timer);
+                                this.isLoading = false;
+                                // 只有在最后实在连不上，才弹窗
+                                alert("连接超时：请打开钱包插件，输入密码解锁，然后重试！");
+                            }
+                        }
+                    }, 500);
+                },
+
+                // --- 4. 获取信息并保存状态 ---
+                async fetchWalletInfo() {
                     if (window.tronWeb && window.tronWeb.ready) {
                         this.wallet = window.tronWeb.defaultAddress.base58;
-                        localStorage.setItem('tron_connected', 'true');
+                        localStorage.setItem('isConnected', 'true'); // 记下来！
                         try {
                             const bal = await window.tronWeb.trx.getBalance(this.wallet);
                             this.balance = (bal / 1e6).toFixed(2);
@@ -267,37 +312,10 @@
                     }
                 },
 
-                async performConnect(providerName) {
-                    this.walletModalOpen = false;
-                    if (!window.tronWeb) {
-                        alert("未检测到钱包插件，请安装 " + providerName);
-                        return;
-                    }
-                    try {
-                        const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                        if (res.code === 200) {
-                            await this.updateWalletState();
-                        } else {
-                            // 如果请求被拒或报错，兜底检查一次是否其实已经连上了
-                            if(window.tronWeb.ready) await this.updateWalletState();
-                            else alert("连接被拒绝，请在插件中解锁钱包！");
-                        }
-                    } catch(e) {
-                        // 关键修复：报错时，再检查一次 ready 状态
-                        // 有时候 TronLink 报 "Already connected" 错误，但这其实算成功
-                        if(window.tronWeb.ready) {
-                            await this.updateWalletState();
-                        } else {
-                            console.error(e);
-                            alert("连接失败：请确保钱包已解锁并选择了波场主网。");
-                        }
-                    }
-                },
-
                 disconnect() {
                     this.wallet = '';
                     this.balance = '0.00';
-                    localStorage.removeItem('tron_connected');
+                    localStorage.removeItem('isConnected'); // 撕掉小纸条
                     location.reload();
                 },
 
@@ -316,7 +334,7 @@
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
                     try {
                         const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
-                        alert("✅ 下注成功！");
+                        alert("✅ 下注交易已发送！\n等待区块确认后自动派奖。");
                     } catch(e) { alert("交易取消"); }
                 },
                 async doInvest() {
