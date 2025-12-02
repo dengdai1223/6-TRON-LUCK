@@ -142,7 +142,7 @@
                 <i class="fa-solid fa-arrow-right text-gray-500"></i>
             </button>
 
-            <button @click="connectWalletConnect()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+            <button @click="connectWC()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-gray-500/20 text-gray-400 flex items-center justify-center"><i class="fa-solid fa-qrcode text-sm"></i></div>
                     <span class="font-semibold text-sm">WalletConnect (移动端)</span>
@@ -175,8 +175,8 @@
             </p>
             <p class="text-xs text-red-400 mt-2 px-2">
                 ⚠️ **功能限制提示：**
-                目前 DApp 核心功能依赖 TronLink 注入的 `window.tronWeb`。\n
-                此 WalletConnect 流程仅为 UI 演示。 **实际交易仍需 TronLink 钱包。**
+                目前 DApp 核心功能仍依赖 **TronLink** 的注入对象。\n
+                此 WalletConnect UI **已就绪**，但需要额外配置 TRON Wallet Adapter 库才能进行实际连接。
             </p>
 
             <button @click="wcModalOpen = false" class="w-full bg-primary text-white py-2 rounded-lg font-bold mt-4">关闭/取消连接</button>
@@ -196,7 +196,7 @@
                 investType: 'equity',
                 gameModalOpen: false,
                 walletSelectModalOpen: false, 
-                wcModalOpen: false, // 🌟 新增：WalletConnect Modal 状态
+                wcModalOpen: false, // WalletConnect Modal 状态
                 playMode: 'web3',
                 wallet: '',
                 balance: '0.00',
@@ -207,7 +207,7 @@
                 
                 pollingId: null, 
 
-                // 初始化时，保持静默，不尝试连接
+                // 初始化
                 init() {
                     console.log("Starting Engine in Passive Mode...");
                     
@@ -221,6 +221,9 @@
                             }
                         });
                     }
+                    
+                    // 🌟 留空：未来 WalletConnect/TWA 初始化代码应放置于此
+                    // if (window.WalletConnect) { this.initializeAdapters(); }
                 },
 
                 // --- 轮询开关 ---
@@ -240,7 +243,7 @@
                 },
 
 
-                // --- 强制检查函数 ---
+                // --- 强制检查函数 (仅检查 TronLink 注入) ---
                 async forceCheckWallet() {
                     if (window.tronWeb && window.tronWeb.ready) {
                         if (this.wallet !== window.tronWeb.defaultAddress.base58) {
@@ -259,9 +262,9 @@
                     }
                 },
 
-                // --- 核心：TronLink 连接逻辑 ---
+                // --- TronLink 连接逻辑 ---
                 async connectTronLink() {
-                    this.walletSelectModalOpen = false; // 关闭选择弹窗
+                    this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
                     
                     if (!window.tronWeb) {
@@ -271,11 +274,8 @@
                     }
 
                     try {
-                        // 请求连接/授权 (会弹出授权窗口)
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
                         this.btnText = "等待授权/解锁..."; 
-                        
-                        // 成功发出请求后，启动轮询监控连接状态
                         this.startPolling(); 
 
                     } catch(e) {
@@ -285,17 +285,22 @@
                     }
                 },
 
-                // 🌟 新增：WalletConnect 连接入口 (演示)
-                async connectWalletConnect() {
+                // 🌟 WalletConnect 连接入口 (启动 QR 码弹窗)
+                async connectWC() {
                     this.walletSelectModalOpen = false;
-                    this.wcModalOpen = true; // 打开 QR 码演示弹窗
-                    
-                    // 实际的 WalletConnect 库集成代码将来会放在这里
-                },
+                    this.wcModalOpen = true; 
+                    this.btnText = "连接中..."; 
 
-                // --- 顶部按钮点击事件：打开选择弹窗 ---
-                manualConnect() {
-                    this.walletSelectModalOpen = true;
+                    // ⚠️ 未来 WalletConnect 库的连接/QR 码生成代码将在此处实现
+                    // if (this.wcAdapter) { await this.wcAdapter.connect(); }
+
+                    // 演示目的：延时后失败
+                    setTimeout(() => {
+                        if (!this.wallet) {
+                            // alert("WalletConnect 连接超时，请扫描二维码或检查网络。");
+                            this.btnText = "连接钱包";
+                        }
+                    }, 5000); 
                 },
 
                 // --- 断开钱包 ---
@@ -305,8 +310,8 @@
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
                 },
-
-                // --- 其他功能函数 (保持不变) ---
+                
+                // ... (其他 DApp 逻辑保持不变)
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
