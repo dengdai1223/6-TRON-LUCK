@@ -265,72 +265,103 @@
                 investAmount: '',
                 config: CONFIG,
                 
-                // --- 初始化逻辑 ---
+                // --- 初始化 ---
                 init() {
-                    // 轮询检查钱包注入状态 (每500毫秒查一次，直到连上)
-                    let checkInterval = setInterval(() => {
-                        this.autoConnect();
-                    }, 1000);
+                    // 1. 检查浏览器缓存，看以前是不是连过
+                    const shouldAutoConnect = localStorage.getItem('tron_connected');
                     
-                    // 监听账号切换
+                    if (shouldAutoConnect === 'true') {
+                        console.log("检测到历史连接记录，正在自动重连...");
+                        // 启动轮询检查 (因为 TronLink 注入需要几百毫秒)
+                        let checkTimer = setInterval(() => {
+                            if (window.tronWeb && window.tronWeb.ready) {
+                                this.updateWalletState();
+                                clearInterval(checkTimer);
+                            }
+                        }, 500);
+                    }
+
+                    // 2. 监听钱包切换账号事件 (TronLink 官方标准)
                     window.addEventListener('message', (e) => {
                         if (e.data.message && e.data.message.action == "accountsChanged") {
-                            this.autoConnect();
+                            console.log("检测到账号切换");
+                            this.updateWalletState();
                         }
                     });
                 },
 
-                // --- 自动连接与状态保持 ---
-                async autoConnect() {
-                    if(window.tronWeb && window.tronWeb.ready) {
+                // --- 统一的更新状态函数 ---
+                async updateWalletState() {
+                    if (window.tronWeb && window.tronWeb.ready) {
                         this.wallet = window.tronWeb.defaultAddress.base58;
+                        // 存入缓存：标记为已连接
+                        localStorage.setItem('tron_connected', 'true');
+                        
                         // 获取余额
                         try {
                             const bal = await window.tronWeb.trx.getBalance(this.wallet);
                             this.balance = (bal / 1e6).toFixed(2);
-                        } catch(e) { console.error("获取余额失败", e); }
-                    }
-                },
-                
-                // --- 手动连接按钮 ---
-                async connectWallet() {
-                    if (window.tronWeb) {
-                        try {
-                            const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                            if(res.code === 200) {
-                                this.autoConnect();
-                            }
-                        } catch(e) {
-                            // 兼容旧版 TronLink
-                            if(!window.tronWeb.ready) {
-                                alert("请在钱包插件中输入密码解锁！");
-                            } else {
-                                this.autoConnect();
-                            }
-                        }
+                        } catch(e) { console.error(e); }
                     } else {
-                        alert("请安装 TronLink 插件或在 TokenPocket 中打开");
+                        // 如果钱包被锁定了，视为断开
+                        this.wallet = '';
                     }
                 },
 
-                // --- 手动断开 (清除本地状态) ---
+                // --- 手动点击连接 ---
+                async connectWallet() {
+                    if (window.tronWeb) {
+                        try {
+                            // 请求授权
+                            const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                            
+                            if (res.code === 200) {
+                                // 授权成功，更新状态
+                                await this.updateWalletState();
+                            } else {
+                                // 可能是旧版 TronLink，直接检查 ready
+                                if (window.tronWeb.ready) {
+                                    await this.updateWalletState();
+                                } else {
+                                    alert("请在插件中解锁钱包！");
+                                }
+                            }
+                        } catch(e) {
+                            console.error("连接出错", e);
+                            // 兜底尝试
+                            if (window.tronWeb.ready) await this.updateWalletState();
+                            else alert("连接被拒绝或钱包未解锁");
+                        }
+                    } else {
+                        alert("未检测到 TronLink，请安装插件或使用 TP 钱包打开");
+                    }
+                },
+
+                // --- 手动断开 ---
                 disconnect() {
                     if(confirm("确定要断开连接吗？")) {
                         this.wallet = '';
                         this.balance = '0.00';
-                        // 注意：网页无法强制让 TronLink 插件登出，只能清除网页端的显示
+                        // 关键：清除缓存记录
+                        localStorage.removeItem('tron_connected');
+                        // 刷新页面以确保彻底清除内存状态 (可选，但推荐)
+                        location.reload();
                     }
                 },
-                
+
+                // --- 其他业务逻辑保持不变 ---
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
-                        document.getElementById("qrcode-container").innerHTML = "";
-                        new QRCode(document.getElementById("qrcode-container"), { text: CONFIG.receiveAddr, width: 140, height: 140 });
+                        const box = document.getElementById("qrcode-container");
+                        if(box) {
+                            box.innerHTML = "";
+                            new QRCode(box, { text: CONFIG.receiveAddr, width: 140, height: 140 });
+                        }
                     }, 100);
                 },
 
-                shortAddr(addr) { return addr.slice(0,4) + '...' + addr.slice(-4); },
+                shortAddr(addr) { return addr ? addr.slice(0,4) + '...' + addr.slice(-4) : ''; },
                 copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
 
                 async doBet(guess) {
@@ -339,9 +370,8 @@
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
                     try {
                         const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
-                        alert("✅ 下注交易已发送！\n等待区块确认后自动派奖。");
+                        alert("✅ 下注交易已发送！\n请等待派奖。");
                     } catch(e) {
-                        console.error(e);
                         alert("交易取消");
                     }
                 },
@@ -354,7 +384,6 @@
                         await contract.invest().send({ callValue: window.tronWeb.toSun(this.investAmount) });
                         alert("🎉 众筹成功！");
                     } catch(e) {
-                        console.error(e);
                         alert("交易失败: " + (e.message || "未知错误"));
                     }
                 }
@@ -363,3 +392,4 @@
     </script>
 </body>
 </html>
+
