@@ -12,8 +12,6 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <script src="https://unpkg.com/@walletconnect/client@1.8.0/dist/umd/index.min.js"></script>
-
     <script>
         tailwind.config = { theme: { extend: { colors: { bg: '#0f111a', surface: '#1e212b', primary: '#8b5cf6', secondary: '#10b981' } } } }
     </script>
@@ -120,70 +118,41 @@
         <div @click.stop class="bg-surface rounded-xl p-6 w-11/12 max-w-sm border border-gray-700 shadow-2xl space-y-4">
             <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-3">选择钱包进行连接</h3>
             
-            <button @click="connectTronLink()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition">
+            <button @click="connectWallet()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center"><i class="fa-solid fa-plug text-sm"></i></div>
                     <span class="font-semibold text-sm">TronLink (推荐)</span>
                 </div>
-                <i class="fa-solid fa-check-circle text-primary"></i>
+                <i class="fa-solid fa-arrow-right text-primary"></i>
             </button>
             
-            <button @click="alert('当前 DApp 运行于波场（Tron）网络，请在您的钱包中切换到波场网络后再尝试连接。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-80">
+            <button @click="connectWallet()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-90">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-yellow-600/20 text-yellow-500 flex items-center justify-center"><i class="fa-solid fa-briefcase text-sm"></i></div>
-                    <span class="font-semibold text-sm">OKX Wallet (欧易钱包)</span>
+                    <span class="font-semibold text-sm">OKX Wallet (插件)</span>
                 </div>
                 <i class="fa-solid fa-arrow-right text-gray-500"></i>
             </button>
 
-            <button @click="alert('当前 DApp 运行于波场（Tron）网络，请在您的钱包中切换到波场网络后再尝试连接。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-80">
+            <button @click="connectWallet()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-90">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center"><i class="fa-solid fa-key text-sm"></i></div>
-                    <span class="font-semibold text-sm">TokenPocket</span>
+                    <span class="font-semibold text-sm">TokenPocket (插件)</span>
                 </div>
                 <i class="fa-solid fa-arrow-right text-gray-500"></i>
             </button>
 
-            <button @click="connectWC()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-full bg-gray-500/20 text-gray-400 flex items-center justify-center"><i class="fa-solid fa-qrcode text-sm"></i></div>
-                    <span class="font-semibold text-sm">WalletConnect (TokenPocket/OKX)</span>
-                </div>
-                <i class="fa-solid fa-arrow-right text-gray-500"></i>
-            </button>
-
-            <button @click="alert('当前 DApp 运行于波场（Tron）网络，MetaMask 默认不支持波场交易。请确保您已在钱包中添加波场网络并切换，或使用 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+            <button @click="alert('当前 DApp 运行于波场（Tron）网络，您的钱包插件必须处于波场网络模式才能连接。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-orange-600/20 text-orange-400 flex items-center justify-center"><i class="fa-solid fa-mask text-sm"></i></div>
-                    <span class="font-semibold text-sm">MetaMask / EVM 钱包</span>
+                    <span class="font-semibold text-sm">其他 TRON 兼容钱包</span>
                 </div>
-                <i class="fa-solid fa-xmark-circle text-red-500"></i>
+                <i class="fa-solid fa-info-circle text-gray-500"></i>
             </button>
 
             <button @click="walletSelectModalOpen = false" class="w-full text-xs text-gray-400 hover:text-white pt-2">取消</button>
         </div>
     </div>
-
-    <div x-show="wcModalOpen" @click.away="wcModalOpen = false" x-transition.opacity class="fixed inset-0 z-[80] flex items-center justify-center modal-bg">
-        <div @click.stop class="bg-surface rounded-xl p-6 w-11/12 max-w-sm border border-gray-700 shadow-2xl space-y-4 text-center">
-            <h3 class="text-xl font-bold text-white mb-4">通过 WalletConnect 连接</h3>
-            
-            <div id="wc-qrcode-container" class="bg-white p-2 rounded-xl mx-auto w-44 h-44 flex items-center justify-center">
-                <i x-show="!wcUri" class="fa-solid fa-spinner fa-spin text-4xl text-gray-500"></i>
-                </div>
-            
-            <p class="text-sm text-gray-300 mt-4">
-                请使用 **TokenPocket 或 OKX Wallet** 扫描上方二维码进行授权。
-            </p>
-            <p class="text-xs text-red-400 mt-2 px-2">
-                ⚠️ **重要警告：**
-                WalletConnect 连接成功后，您可以看到地址，但**当前 DApp 的交易（下注、众筹）功能仍依赖 TronLink**。如需交易，请使用 TronLink。
-            </p>
-
-            <button @click="wcModalOpen = false; disconnectWC()" class="w-full bg-primary text-white py-2 rounded-lg font-bold mt-4">关闭/取消连接</button>
-        </div>
-    </div>
-
 
     <script>
         const CONFIG = {
@@ -197,7 +166,6 @@
                 investType: 'equity',
                 gameModalOpen: false,
                 walletSelectModalOpen: false, 
-                wcModalOpen: false, 
                 playMode: 'web3',
                 wallet: '',
                 balance: '0.00',
@@ -207,15 +175,13 @@
                 config: CONFIG,
                 
                 pollingId: null, 
-                // 🌟 WalletConnect 状态
-                wcClient: null,
-                wcUri: '',
-
+                
                 // 初始化
                 init() {
                     console.log("Starting Engine in Passive Mode...");
                     
                     if (window.tronWeb) {
+                        // 监听 TronLink/兼容钱包的账户或网络变化事件
                         window.addEventListener('message', e => {
                             if (e.data.message && (e.data.message.action === 'setAccount' || e.data.message.action === 'setNode')) {
                                 console.log('Wallet state changed via event. Checking connection...');
@@ -225,197 +191,79 @@
                             }
                         });
                     }
-                    
-                    // WalletConnect 监听器
-                    this.$watch('wcModalOpen', (open) => {
-                        if(open) {
-                            // 确保每次打开弹窗时都尝试初始化连接
-                            this.initializeWC();
-                        } else {
-                            // 弹窗关闭时，如果未连接，清理 URI
-                            if (!this.wcClient || !this.wcClient.connected) {
-                                this.wcUri = '';
-                            }
-                        }
-                    });
+                    // 页面加载后自动尝试检查连接状态
+                    this.startPolling();
                 },
 
-                // 🌟 WalletConnect 初始化及事件监听
-                async initializeWC() {
-                    if (typeof WalletConnect === 'undefined') {
-                        alert("WalletConnect 库加载失败，请检查 CDN 链接。");
-                        this.wcModalOpen = false;
-                        return;
-                    }
-
-                    try {
-                        // 1. 实例化 WalletConnect 客户端
-                        // 优化：如果已有连接或客户端，先清理
-                        if (this.wcClient && this.wcClient.connected) {
-                            // 已连接，直接显示地址
-                            this.handleWCSession({ params: [this.wcClient.session] });
-                            return;
-                        } else if (this.wcClient) {
-                            // 如果有客户端但未连接，先销毁旧的，确保 URI 是新的
-                            await this.wcClient.killSession();
-                            this.wcClient = null;
-                        }
-
-                        this.wcClient = new WalletConnect.default({
-                            bridge: "https://bridge.walletconnect.org", 
-                            qrcodeModal: false, 
-                        });
-
-                        // 2. 监听连接和断开事件
-                        this.wcClient.on("connect", (error, payload) => {
-                            if (error) { console.error("WC Connect Error:", error); return; }
-                            this.handleWCSession(payload);
-                        });
-
-                        this.wcClient.on("session_update", (error, payload) => {
-                            if (error) { console.error("WC Session Update Error:", error); return; }
-                            this.handleWCSession(payload);
-                        });
-
-                        this.wcClient.on("disconnect", (error, payload) => {
-                            if (error) { console.error("WC Disconnect Error:", error); }
-                            this.disconnectWC();
-                        });
-
-                        // 3. 创建新会话并显示 QR 码 URI
-                        // TRON 官方文档建议使用 chainId 1（以太坊主网）来触发 WalletConnect 兼容性，
-                        // 然后钱包自行切换到 TRON 网络，或者使用特定 bridge。
-                        // 这里我们使用 chainId 1，让 TP/OKX 遵循标准流程。
-                        await this.wcClient.createSession({ chainId: 1 });
-                        this.wcUri = this.wcClient.uri;
-                        this.renderWCQRCode(this.wcUri);
-
-                    } catch (e) {
-                        console.error("WalletConnect 启动失败:", e);
-                        alert("WalletConnect 启动失败。请确保您已加载 WalletConnect 库，并检查浏览器控制台错误。");
-                        this.wcModalOpen = false;
-                    }
-                },
-
-                // 🌟 处理 WalletConnect 会话更新
-                handleWCSession(payload) {
-                    const session = payload.params[0];
-                    if (session.accounts && session.accounts.length > 0) {
-                        // WalletConnect 返回的是 TRON 地址 (T字母开头)
-                        this.wallet = session.accounts[0]; 
-                        this.wcModalOpen = false;
-                        this.btnText = "已连接 (WC)";
-                        this.balance = '?.??'; // 无法获取 TRX 余额，因为没有 TronWeb 权限
-                        alert(`WalletConnect 连接成功！地址: ${this.shortAddr(this.wallet)}\n\n⚠️ 警告: 交易功能仍依赖 TronLink，请勿尝试下注/众筹。`);
-                        this.stopPolling(); 
-                    }
-                },
-
-                // 🌟 渲染 WalletConnect QR 码
-                renderWCQRCode(uri) {
-                    const box = document.getElementById("wc-qrcode-container");
-                    if(box) { 
-                        box.innerHTML = ""; 
-                        new QRCode(box, { 
-                            text: uri, 
-                            width: 160, 
-                            height: 160,
-                            colorDark : "#000000",
-                            colorLight : "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.H
-                        }); 
-                    }
-                },
-
-                // 🌟 断开 WalletConnect 连接
-                async disconnectWC() {
-                    if (this.wcClient && this.wcClient.connected) {
-                        try {
-                            await this.wcClient.killSession();
-                        } catch (e) {
-                            console.warn("WC killSession failed:", e);
-                        }
-                    }
-                    this.wcClient = null;
-                    this.wcUri = '';
-                    this.disconnect(); // 调用基础断开函数
-                },
-
-
-                // --- 轮询开关 --- (仅用于 TronLink)
+                // --- 轮询开关 --- 
                 startPolling() {
                     if (this.pollingId) return; 
+                    // 每隔 1 秒检查一次钱包状态
                     this.pollingId = setInterval(() => {
                         this.forceCheckWallet();
                     }, 1000);
-                    console.log("TronLink Polling started.");
+                    console.log("Wallet Polling started.");
                 },
                 stopPolling() {
                     if (this.pollingId) {
                         clearInterval(this.pollingId);
                         this.pollingId = null; 
-                        console.log("TronLink Polling stopped.");
+                        console.log("Wallet Polling stopped.");
                     }
                 },
 
 
-                // --- 强制检查函数 (仅检查 TronLink 注入) ---
+                // --- 强制检查函数 (通用检查) ---
                 async forceCheckWallet() {
+                    // 检查 window.tronWeb 是否存在且已准备好
                     if (window.tronWeb && window.tronWeb.ready) {
-                        // TronLink 处于连接状态
-                        if (this.wallet !== window.tronWeb.defaultAddress.base58) {
-                            this.wallet = window.tronWeb.defaultAddress.base58;
+                        const currentAddr = window.tronWeb.defaultAddress.base58;
+
+                        if (this.wallet !== currentAddr) {
+                            this.wallet = currentAddr;
                             this.btnText = "已连接";
                             try {
                                 const bal = await window.tronWeb.trx.getBalance(this.wallet);
                                 this.balance = (bal / 1e6).toFixed(2);
-                            } catch(e) {}
+                                this.startPolling(); // 确保正在轮询
+                            } catch(e) {
+                                this.balance = '?.??';
+                                console.error("无法获取余额:", e);
+                            }
                         }
                     } else {
-                        // TronLink 掉线，且当前不是 WalletConnect 连接状态
-                        if (this.wcClient === null || !this.wcClient.connected) {
+                        // 如果 window.tronWeb 不存在或未准备好
+                        if (this.wallet) {
+                            // 只有当之前连接过，现在断开时才重置状态
                             this.wallet = '';
                             this.balance = '0.00';
                             this.btnText = "连接钱包";
-                            this.stopPolling();
                         }
                     }
                 },
 
-                // --- TronLink 连接逻辑 ---
-                async connectTronLink() {
+                // 🌟 通用连接入口 (适用于 TronLink/OKX/TP 插件)
+                async connectWallet() {
                     this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
                     
                     if (!window.tronWeb) {
-                        alert("未检测到 TronLink 钱包插件，请安装！");
+                        alert("未检测到 TRON 兼容钱包插件（如 TronLink, OKX Wallet, TokenPocket），请确保您已安装并切换到 TRON 网络。");
                         this.btnText = "连接钱包";
                         return;
                     }
-                    // 如果当前是 WC 连接，先断开
-                    if (this.wcClient && this.wcClient.connected) {
-                         this.disconnectWC();
-                    }
 
                     try {
+                        // 请求连接/授权
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
                         this.btnText = "等待授权/解锁..."; 
-                        this.startPolling(); 
+                        this.startPolling(); // 启动轮询以获取最新地址和余额
 
                     } catch(e) {
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
-                        alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
+                        alert("连接请求失败。请检查您的钱包插件是否已解锁或是否拒绝了授权。");
                     }
-                },
-
-                // 🌟 WalletConnect 连接入口 (启动 QR 码弹窗)
-                async connectWC() {
-                    this.walletSelectModalOpen = false;
-                    this.wcModalOpen = true; 
-                    this.btnText = "连接中..."; 
-                    
-                    // initializeWC 会在 $watch 中被调用，生成 QR 码
                 },
 
                 // --- 断开钱包 (通用) ---
@@ -424,12 +272,10 @@
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    if (this.wcClient) {
-                         this.disconnectWC(); // 如果是 WC 连接，断开 WC
-                    }
+                    // 注意：插件钱包通常没有 API 主动断开连接，只能移除应用端的状态。
                 },
                 
-                // --- 其他 DApp 逻辑 (注意兼容性警告) ---
+                // --- 其他 DApp 逻辑 (保持不变) ---
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
@@ -441,8 +287,7 @@
                 copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
                 async doBet(guess) {
                     if(!this.wallet) return alert("请先连接钱包！！！！");
-                    // ⚠️ 注意：WalletConnect 连接状态下，window.tronWeb 不存在，交易会失败！
-                    if (!window.tronWeb) return alert("交易失败：当前连接的钱包（如 WalletConnect）不支持直接调用 TronLink 的交易函数。请使用 TronLink 钱包。");
+                    if (!window.tronWeb) return alert("交易失败：未检测到 TRON 钱包 Web3 对象。请确保插件已连接。");
                     
                     let amountSun = window.tronWeb.toSun(this.betAmount);
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
@@ -453,8 +298,7 @@
                 },
                 async doInvest() {
                     if(!this.wallet) return alert("请先连接钱包");
-                    // ⚠️ 注意：WalletConnect 连接状态下，window.tronWeb 不存在，交易会失败！
-                    if (!window.tronWeb) return alert("交易失败：当前连接的钱包（如 WalletConnect）不支持直接调用 TronLink 的交易函数。请使用 TronLink 钱包。");
+                    if (!window.tronWeb) return alert("交易失败：未检测到 TRON 钱包 Web3 对象。请确保插件已连接。");
 
                     if(!this.investAmount) return alert("请输入金额");
                     try {
