@@ -142,7 +142,7 @@
                 <i class="fa-solid fa-arrow-right text-gray-500"></i>
             </button>
 
-            <button @click="alert('当前 DApp 运行于波场（Tron）网络，请在您的钱包中切换到波场网络后再尝试连接。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+            <button @click="connectWalletConnect()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-gray-500/20 text-gray-400 flex items-center justify-center"><i class="fa-solid fa-qrcode text-sm"></i></div>
                     <span class="font-semibold text-sm">WalletConnect (移动端)</span>
@@ -162,6 +162,27 @@
         </div>
     </div>
 
+    <div x-show="wcModalOpen" @click.away="wcModalOpen = false" x-transition.opacity class="fixed inset-0 z-[80] flex items-center justify-center modal-bg">
+        <div @click.stop class="bg-surface rounded-xl p-6 w-11/12 max-w-sm border border-gray-700 shadow-2xl space-y-4 text-center">
+            <h3 class="text-xl font-bold text-white mb-4">通过 WalletConnect 连接</h3>
+            
+            <div id="wc-qrcode-container" class="bg-gray-800/50 p-6 rounded-xl border border-gray-700 mx-auto w-40 h-40 flex items-center justify-center">
+                <i class="fa-solid fa-qrcode text-6xl text-gray-500"></i>
+            </div>
+            
+            <p class="text-sm text-gray-300 mt-4">
+                请使用您的移动钱包（如 TokenPocket/OKX）扫描上方二维码。\n
+            </p>
+            <p class="text-xs text-red-400 mt-2 px-2">
+                ⚠️ **功能限制提示：**
+                目前 DApp 核心功能依赖 TronLink 注入的 `window.tronWeb`。\n
+                此 WalletConnect 流程仅为 UI 演示。 **实际交易仍需 TronLink 钱包。**
+            </p>
+
+            <button @click="wcModalOpen = false" class="w-full bg-primary text-white py-2 rounded-lg font-bold mt-4">关闭/取消连接</button>
+        </div>
+    </div>
+
 
     <script>
         const CONFIG = {
@@ -175,6 +196,7 @@
                 investType: 'equity',
                 gameModalOpen: false,
                 walletSelectModalOpen: false, 
+                wcModalOpen: false, // 🌟 新增：WalletConnect Modal 状态
                 playMode: 'web3',
                 wallet: '',
                 balance: '0.00',
@@ -261,6 +283,14 @@
                         this.btnText = "连接钱包";
                         alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
                     }
+                },
+
+                // 🌟 新增：WalletConnect 连接入口 (演示)
+                async connectWalletConnect() {
+                    this.walletSelectModalOpen = false;
+                    this.wcModalOpen = true; // 打开 QR 码演示弹窗
+                    
+                    // 实际的 WalletConnect 库集成代码将来会放在这里
                 },
 
                 // --- 顶部按钮点击事件：打开选择弹窗 ---
