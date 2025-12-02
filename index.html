@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TronLuck | 去中心化游戏金融协议</title>
+    <title>TronLuck | 去中心化游戏金融协议！！！！</title>
     <link rel="manifest" href="manifest.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -224,12 +224,12 @@
                 shortAddr(addr) { return addr ? addr.slice(0,4) + '...' + addr.slice(-4) : ''; },
                 copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
                 async doBet(guess) {
-                    if(!this.wallet) return alert("请先连接钱包");
+                    if(!this.wallet) return alert("请先连接钱包！！！！");
                     let amountSun = window.tronWeb.toSun(this.betAmount);
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
                     try {
                         const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
-                        alert("✅ 下注成功！");
+                        alert("✅ 下注成功！！！！");
                     } catch(e) { alert("交易取消"); }
                 },
                 async doInvest() {
