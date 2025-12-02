@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TronLuck | 222去中心化游戏金融协议！！！！</title>
+    <title>TronLuck | 去中心化游戏金融协议！！！！</title>
     
-
     <link rel="manifest" href="https://dengdai1223.github.io/6-TRON-LUCK/manifest.json">
-    
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -135,6 +133,20 @@
                 btnText: '连接钱包',
                 config: CONFIG,
                 
+                // 新增：用于存储 setInterval ID，用于控制轮询开关
+                pollingId: null, 
+
+                // 新增：启动轮询的函数
+                startPolling() {
+                    // 如果已经有轮询，则不重复启动
+                    if (this.pollingId) return; 
+
+                    this.pollingId = setInterval(() => {
+                        this.forceCheckWallet();
+                    }, 1000);
+                    console.log("Polling started.");
+                },
+
                 init() {
                     console.log("Starting Engine...");
                     
@@ -149,11 +161,8 @@
                         });
                     }
                     
-                    // 2. 暴力轮询引擎 (作为兼容和二次确认)
-                    // 不管你刷不刷新，每 1 秒我就查一次状态
-                    setInterval(() => {
-                        this.forceCheckWallet();
-                    }, 1000);
+                    // 2. 启动轮询引擎
+                    this.startPolling();
                 },
 
                 // --- 强制检查函数 ---
@@ -190,8 +199,9 @@
                         return;
                     }
 
-                    // 1. 如果已经 Ready，直接触发更新并返回
+                    // 1. 如果已经 Ready，先确保轮询在跑
                     if (window.tronWeb.ready) {
+                        this.startPolling(); // 确保轮询在跑
                         this.forceCheckWallet();
                         this.btnText = "已连接"; 
                         return;
@@ -201,8 +211,11 @@
                     try {
                         // 这将触发钱包插件的授权或解锁弹窗
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                        // 请求发出，等待用户在插件中操作
                         this.btnText = "等待授权/解锁..."; 
+                        
+                        // 成功发出请求后，确保轮询启动，以便在授权成功后立即更新状态
+                        this.startPolling(); 
+
                     } catch(e) {
                         // 请求失败 (用户拒绝、或钱包锁定但未弹出提示)
                         console.error("连接请求失败:", e.message);
@@ -212,12 +225,18 @@
                 },
 
                 disconnect() {
-                    // 这是一个软断开，只清除网页显示
-                    // 真正的断开需要在钱包插件里操作
+                    // 1. 停止轮询，这是解决自动重连的关键
+                    if (this.pollingId) {
+                        clearInterval(this.pollingId);
+                        this.pollingId = null; 
+                        console.log("Polling stopped.");
+                    }
+
+                    // 2. 这是一个软断开，只清除网页显示
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    // 2. 移除 location.reload()，避免刷新断开
+                    // 真正的断开操作（清除网站授权）需要在钱包插件中进行
                 },
 
                 openGame(type) {
@@ -252,6 +271,3 @@
     </script>
 </body>
 </html>
-
-
-
