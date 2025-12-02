@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TronLuck | 去中心化游戏金融协议</title>
+    
+    <!-- 资源库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- UI 主题配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0f111a',
+                        surface: '#1e212b',
+                        primary: '#8b5cf6',
+                        secondary: '#10b981',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        body { background-color: #0f111a; color: #fff; -webkit-tap-highlight-color: transparent; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass { background: rgba(30, 33, 43, 0.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .feature-card { border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
+    </style>
+</head>
+
+<body x-data="app()" class="flex flex-col h-screen overflow-hidden">
+
+    <!-- 顶部栏 -->
+    <header class="h-14 px-4 flex items-center justify-between glass fixed top-0 w-full z-50">
+        <div class="font-bold text-lg tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-cube text-primary"></i> Tron<span class="text-white">Luck</span>
+        </div>
+        <button @click="connectWallet()" 
+            class="text-xs bg-gray-800 border border-gray-700 rounded-full px-3 py-1.5 flex items-center gap-2 transition active:scale-95">
+            <div class="w-2 h-2 rounded-full" :class="wallet ? 'bg-green-500' : 'bg-gray-500'"></div>
+            <span x-text="wallet ? shortAddr(wallet) : '连接钱包'"></span>
+        </button>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 overflow-y-auto pt-16 pb-24 px-4 no-scrollbar space-y-8">
+
+        <!-- ================= 🏠 1. 首页 (Home) ================= -->
+        <div x-show="activeTab === 'home'" x-transition.opacity class="space-y-8">
+            <div class="text-center py-8">
+                <div class="inline-block px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold mb-4 border border-primary/30">
+                    🚀 波场首个 0 Gas 游戏金融协议
+                </div>
+                <h1 class="text-4xl font-bold mb-4 leading-tight">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">去中心化</span><br>
+                    公平与财富重构
+                </h1>
+                <p class="text-gray-400 text-sm mb-6 px-4">
+                    TronLuck 是由智能合约驱动的流动性协议。玩家享受 0 磨损的公平博彩，投资者享受真实的现金流分红。
+                </p>
+                <div class="flex justify-center gap-4">
+                    <button @click="activeTab='game'" class="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-purple-900/50 active:scale-95 transition">开始游戏</button>
+                    <button @click="activeTab='wealth'" class="bg-surface border border-gray-700 text-white px-8 py-3 rounded-full font-bold active:scale-95 transition">参与众筹</button>
+                </div>
+            </div>
+
+            <!-- 优势展示 -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="feature-card p-4 rounded-xl">
+                    <i class="fa-solid fa-code text-2xl text-blue-400 mb-2"></i>
+                    <h4 class="font-bold text-sm">智能合约托管</h4>
+                    <p class="text-[10px] text-gray-400 mt-1">资金锁定在链上合约，管理员无法挪用。</p>
+                </div>
+                <div class="feature-card p-4 rounded-xl">
+                    <i class="fa-solid fa-wallet text-2xl text-purple-400 mb-2"></i>
+                    <h4 class="font-bold text-sm">资金在您手中</h4>
+                    <p class="text-[10px] text-gray-400 mt-1">非托管式游戏。不下注时资金100%在您的钱包。</p>
+                </div>
+            </div>
+
+            <!-- 路线图 -->
+            <div>
+                <h3 class="font-bold text-lg mb-4">🗺️ 路线图</h3>
+                <div class="space-y-0 relative border-l border-gray-700 ml-3">
+                    <div class="mb-6 ml-6 relative">
+                        <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-primary border-2 border-bg"></span>
+                        <h4 class="font-bold text-white text-sm">Phase 1: 协议启动</h4>
+                        <p class="text-xs text-gray-500">上线哈希猜单双，部署众筹合约。</p>
+                    </div>
+                    <div class="ml-6 relative">
+                        <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-gray-600 border-2 border-bg"></span>
+                        <h4 class="font-bold text-gray-400 text-sm">Phase 2: SunPump 发币</h4>
+                        <p class="text-xs text-gray-500">发行治理代币，开启积分空投。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 🎮 2. 游戏大厅 (Game) ================= -->
+        <div x-show="activeTab === 'game'" x-transition.opacity>
+            <div class="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-2xl p-5 mb-6 shadow-lg shadow-purple-900/20">
+                <p class="text-xs text-purple-200 mb-1">实时奖金池</p>
+                <h2 class="text-3xl font-bold text-white mb-2">128,500 <span class="text-sm">TRX</span></h2>
+                <div class="flex gap-2">
+                    <span class="bg-black/20 text-[10px] px-2 py-1 rounded text-green-300">✅ 即时赔付</span>
+                    <span class="bg-black/20 text-[10px] px-2 py-1 rounded text-yellow-300">⚡ 0 Gas费</span>
+                </div>
+            </div>
+
+            <h3 class="text-sm font-bold text-gray-400 mb-3">游戏列表</h3>
+            <div @click="openGame('classic')" class="surface rounded-xl p-4 flex items-center justify-between mb-4 border border-gray-800 active:scale-[0.98] transition cursor-pointer">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400 text-xl"><i class="fa-solid fa-hashtag"></i></div>
+                    <div>
+                        <h4 class="font-bold text-white">哈希猜单双</h4>
+                        <p class="text-xs text-gray-500">区块哈希尾数定胜负 | 赔率 1.98</p>
+                    </div>
+                </div>
+                <button class="bg-primary text-white text-xs px-4 py-2 rounded-full font-bold">Play</button>
+            </div>
+        </div>
+
+        <!-- ================= 💰 3. 财富理财 (Wealth) ================= -->
+        <div x-show="activeTab === 'wealth'" x-transition.opacity>
+            <div class="bg-surface p-1 rounded-lg flex mb-6">
+                <button @click="investType = 'equity'" :class="investType === 'equity' ? 'bg-gray-700 text-white' : 'text-gray-500'" class="flex-1 py-2 text-sm font-bold rounded transition">我是股东 (浮动)</button>
+                <button @click="investType = 'fixed'" :class="investType === 'fixed' ? 'bg-gray-700 text-white' : 'text-gray-500'" class="flex-1 py-2 text-sm font-bold rounded transition">定期理财 (固定)</button>
+            </div>
+
+            <div x-show="investType === 'equity'">
+                <div class="text-center py-4">
+                    <h2 class="text-4xl font-bold text-primary">12.5%</h2>
+                    <p class="text-xs text-gray-400">历史月化收益率 (Est.)</p>
+                </div>
+                <div class="surface rounded-xl p-5 border border-gray-800 space-y-4">
+                    <div class="bg-blue-500/10 p-3 rounded text-xs text-blue-300">ℹ️ 股东资金即为庄家资金，按比例分享利润。</div>
+                    <div class="flex gap-3">
+                        <input type="number" x-model="investAmount" placeholder="输入 TRX" class="flex-1 bg-black/30 border border-gray-700 rounded-lg px-3 text-sm text-white focus:outline-none">
+                        <button @click="doInvest()" class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold">存入</button>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="investType === 'fixed'" class="space-y-4">
+                <div class="surface rounded-xl p-4 border-l-4 border-blue-500 flex justify-between items-center">
+                    <div><h3 class="font-bold text-white">稳健月卡</h3><p class="text-xs text-gray-400">锁仓 30 天</p></div>
+                    <div class="text-right"><div class="text-xl font-bold text-green-400">30%</div><div class="text-[10px] text-gray-500">年化 APY</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 👤 4. 我的 (Mine) ================= -->
+        <div x-show="activeTab === 'mine'" x-transition.opacity>
+            <div class="surface rounded-2xl p-6 text-center mb-6 border border-gray-800">
+                <div class="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl">👾</div>
+                <h2 x-text="wallet ? shortAddr(wallet) : '未连接钱包'" class="font-bold text-lg"></h2>
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div class="bg-black/20 p-2 rounded"><div class="text-lg font-bold text-primary">0</div><div class="text-xs text-gray-500">积分 (Points)</div></div>
+                    <div class="bg-black/20 p-2 rounded"><div class="text-lg font-bold text-green-400">0</div><div class="text-xs text-gray-500">邀请人数</div></div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <div class="surface p-4 rounded-xl flex justify-between text-sm font-bold"><span>📑 推广计划</span><i class="fa-solid fa-chevron-right text-gray-600"></i></div>
+                <div class="surface p-4 rounded-xl flex justify-between text-sm font-bold"><span>📖 帮助文档 / FAQ</span><i class="fa-solid fa-chevron-right text-gray-600"></i></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部导航 -->
+    <nav class="fixed bottom-0 w-full glass border-t border-gray-800 pb-safe z-50">
+        <div class="flex justify-around items-center h-16">
+            <button @click="activeTab='home'" class="flex flex-col items-center gap-1 w-full h-full justify-center active:scale-95 transition">
+                <i class="fa-solid fa-house text-lg" :class="activeTab==='home'?'text-primary':'text-gray-500'"></i>
+                <span class="text-[10px]" :class="activeTab==='home'?'text-white':'text-gray-500'">首页</span>
+            </button>
+            <button @click="activeTab='game'" class="flex flex-col items-center gap-1 w-full h-full justify-center active:scale-95 transition">
+                <i class="fa-solid fa-gamepad text-lg" :class="activeTab==='game'?'text-primary':'text-gray-500'"></i>
+                <span class="text-[10px]" :class="activeTab==='game'?'text-white':'text-gray-500'">大厅</span>
+            </button>
+            <button @click="activeTab='wealth'" class="flex flex-col items-center gap-1 w-full h-full justify-center active:scale-95 transition">
+                <i class="fa-solid fa-sack-dollar text-lg" :class="activeTab==='wealth'?'text-primary':'text-gray-500'"></i>
+                <span class="text-[10px]" :class="activeTab==='wealth'?'text-white':'text-gray-500'">理财</span>
+            </button>
+            <button @click="activeTab='mine'" class="flex flex-col items-center gap-1 w-full h-full justify-center active:scale-95 transition">
+                <i class="fa-solid fa-user text-lg" :class="activeTab==='mine'?'text-primary':'text-gray-500'"></i>
+                <span class="text-[10px]" :class="activeTab==='mine'?'text-white':'text-gray-500'">我的</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 游戏弹窗 -->
+    <div x-show="gameModalOpen" class="fixed inset-0 z-[60] bg-bg flex flex-col" x-transition>
+        <div class="h-14 px-4 flex items-center justify-between border-b border-gray-800 bg-surface">
+            <button @click="gameModalOpen = false" class="text-gray-400"><i class="fa-solid fa-arrow-left"></i> 返回</button>
+            <span class="font-bold">哈希猜单双</span>
+            <div class="w-8"></div>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- 模式切换 -->
+            <div class="flex bg-gray-900 p-1 rounded-lg mb-4">
+                <button @click="playMode='web3'" :class="playMode==='web3' ? 'bg-gray-700 text-white' : 'text-gray-500'" class="flex-1 py-2 text-xs font-bold rounded">一键下注 (Web3)</button>
+                <button @click="playMode='qr'" :class="playMode==='qr' ? 'bg-gray-700 text-white' : 'text-gray-500'" class="flex-1 py-2 text-xs font-bold rounded">扫码转账</button>
+            </div>
+
+            <!-- Web3下注 -->
+            <div x-show="playMode==='web3'" class="space-y-6 text-center">
+                <div class="relative">
+                    <input type="number" x-model="betAmount" class="bg-black/30 border border-gray-700 rounded-xl px-4 py-4 text-2xl text-center text-white w-full font-bold focus:border-primary outline-none">
+                    <div class="absolute right-2 top-2 flex gap-1">
+                        <button @click="betAmount=10" class="bg-gray-800 text-xs px-2 py-1 rounded">10</button>
+                        <button @click="betAmount=100" class="bg-gray-800 text-xs px-2 py-1 rounded">100</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button @click="doBet(1)" class="h-24 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex flex-col items-center justify-center shadow-lg active:scale-95 transition">
+                        <span class="text-2xl font-bold text-white">单 (ODD)</span>
+                    </button>
+                    <button @click="doBet(0)" class="h-24 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex flex-col items-center justify-center shadow-lg active:scale-95 transition">
+                        <span class="text-2xl font-bold text-white">双 (EVEN)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 扫码下注 -->
+            <div x-show="playMode==='qr'" class="text-center">
+                <div class="bg-white p-2 rounded-xl w-40 h-40 mx-auto mb-4" id="qrcode-container"></div>
+                <div class="bg-gray-800 p-3 rounded mb-4 text-xs font-mono text-gray-300 break-all" x-text="config.receiveAddr"></div>
+                <button @click="copyAddr()" class="bg-primary text-white px-6 py-2 rounded-full text-sm font-bold">复制地址</button>
+                <div class="mt-4 text-xs text-gray-500 text-left bg-black/20 p-4 rounded">
+                    <p>⚠️ 转账尾数 1 = 押单，2 = 押双</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 逻辑脚本 -->
+    <script>
+        // --- 核心配置：根据你的要求已填好 ---
+        const CONFIG = {
+            receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm", // 热钱包收款
+            contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"  // 众筹合约
+        };
+
+        function app() {
+            return {
+                activeTab: 'home',
+                investType: 'equity',
+                gameModalOpen: false,
+                playMode: 'web3',
+                wallet: '',
+                betAmount: 10,
+                investAmount: '',
+                config: CONFIG,
+                
+                init() { 
+                    // 延迟检查钱包，等待 TronLink 注入
+                    setTimeout(() => this.checkWallet(), 1000); 
+                },
+
+                // 打开游戏
+                openGame(type) {
+                    this.gameModalOpen = true;
+                    setTimeout(() => {
+                        document.getElementById("qrcode-container").innerHTML = "";
+                        new QRCode(document.getElementById("qrcode-container"), { text: CONFIG.receiveAddr, width: 140, height: 140 });
+                    }, 100);
+                },
+
+                // 连接钱包
+                async connectWallet() {
+                    if (window.tronWeb) {
+                        const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                        if(res.code === 200) this.wallet = window.tronWeb.defaultAddress.base58;
+                    } else alert("请安装 TronLink 插件或在 TokenPocket 中打开");
+                },
+
+                checkWallet() {
+                    if(window.tronWeb && window.tronWeb.ready) this.wallet = window.tronWeb.defaultAddress.base58;
+                },
+
+                shortAddr(addr) { return addr.slice(0,4) + '...' + addr.slice(-4); },
+                
+                copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
+
+                // 核心：Web3 下注逻辑
+                async doBet(guess) {
+                    if(!this.wallet) return alert("请先连接钱包");
+                    
+                    // 金额微调：押单+1sun，押双+2sun，方便后端识别
+                    // 1 TRX = 1,000,000 SUN
+                    let amountSun = window.tronWeb.toSun(this.betAmount);
+                    let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
+                    
+                    try {
+                        const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
+                        alert("✅ 下注交易已发送！\n等待区块确认后自动派奖。");
+                    } catch(e) {
+                        console.error(e);
+                        alert("交易取消");
+                    }
+                },
+
+                // 核心：Web3 众筹逻辑
+                async doInvest() {
+                    if(!this.wallet) return alert("请先连接钱包");
+                    if(!this.investAmount) return alert("请输入金额");
+                    
+                    try {
+                        let contract = await window.tronWeb.contract().at(CONFIG.contractAddr);
+                        // 调用 invest 函数
+                        await contract.invest().send({
+                            callValue: window.tronWeb.toSun(this.investAmount)
+                        });
+                        alert("🎉 众筹成功！您已成为股东。");
+                    } catch(e) {
+                        console.error(e);
+                        alert("交易失败: " + (e.message || "未知错误"));
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
