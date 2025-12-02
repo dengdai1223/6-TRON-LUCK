@@ -147,7 +147,7 @@
             <button @click="connectWC()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-gray-500/20 text-gray-400 flex items-center justify-center"><i class="fa-solid fa-qrcode text-sm"></i></div>
-                    <span class="font-semibold text-sm">WalletConnect (移动端)</span>
+                    <span class="font-semibold text-sm">WalletConnect (TokenPocket/OKX)</span>
                 </div>
                 <i class="fa-solid fa-arrow-right text-gray-500"></i>
             </button>
@@ -173,7 +173,7 @@
                 </div>
             
             <p class="text-sm text-gray-300 mt-4">
-                请使用您的移动钱包扫描上方二维码进行授权。
+                请使用 **TokenPocket 或 OKX Wallet** 扫描上方二维码进行授权。
             </p>
             <p class="text-xs text-red-400 mt-2 px-2">
                 ⚠️ **重要警告：**
@@ -228,9 +228,14 @@
                     
                     // WalletConnect 监听器
                     this.$watch('wcModalOpen', (open) => {
-                        if(open && !this.wcClient) {
+                        if(open) {
                             // 确保每次打开弹窗时都尝试初始化连接
                             this.initializeWC();
+                        } else {
+                            // 弹窗关闭时，如果未连接，清理 URI
+                            if (!this.wcClient || !this.wcClient.connected) {
+                                this.wcUri = '';
+                            }
                         }
                     });
                 },
@@ -245,47 +250,49 @@
 
                     try {
                         // 1. 实例化 WalletConnect 客户端
+                        // 优化：如果已有连接或客户端，先清理
+                        if (this.wcClient && this.wcClient.connected) {
+                            // 已连接，直接显示地址
+                            this.handleWCSession({ params: [this.wcClient.session] });
+                            return;
+                        } else if (this.wcClient) {
+                            // 如果有客户端但未连接，先销毁旧的，确保 URI 是新的
+                            await this.wcClient.killSession();
+                            this.wcClient = null;
+                        }
+
                         this.wcClient = new WalletConnect.default({
-                            bridge: "https://bridge.walletconnect.org", // 默认桥接服务器
-                            qrcodeModal: false, // 不使用内置的模态框
+                            bridge: "https://bridge.walletconnect.org", 
+                            qrcodeModal: false, 
                         });
 
-                        // 2. 监听连接事件
-                        this.wcClient.on("session_request", (error, payload) => {
-                            if (error) { throw error; }
-                            // 在这里可以处理一些特定于波场的连接请求，但通常我们依赖 WalletConnect 适配器。
-                            // 由于是演示，我们直接监听 session_update
-                        });
-
-                        this.wcClient.on("session_update", (error, payload) => {
-                            if (error) { throw error; }
+                        // 2. 监听连接和断开事件
+                        this.wcClient.on("connect", (error, payload) => {
+                            if (error) { console.error("WC Connect Error:", error); return; }
                             this.handleWCSession(payload);
                         });
 
-                        this.wcClient.on("connect", (error, payload) => {
-                            if (error) { throw error; }
+                        this.wcClient.on("session_update", (error, payload) => {
+                            if (error) { console.error("WC Session Update Error:", error); return; }
                             this.handleWCSession(payload);
                         });
 
                         this.wcClient.on("disconnect", (error, payload) => {
-                            if (error) { throw error; }
+                            if (error) { console.error("WC Disconnect Error:", error); }
                             this.disconnectWC();
                         });
 
-                        // 3. 检查是否有现有会话
-                        if (this.wcClient.connected) {
-                            this.handleWCSession({ params: [this.wcClient.session] });
-                            this.wcModalOpen = false; // 如果已连接，关闭弹窗
-                        } else {
-                            // 4. 创建新会话并显示 QR 码 URI
-                            await this.wcClient.createSession({ chainId: 195 }); // 195是波场的测试链ID，正式环境应该使用一个通用或适配的ID
-                            this.wcUri = this.wcClient.uri;
-                            this.renderWCQRCode(this.wcUri);
-                        }
+                        // 3. 创建新会话并显示 QR 码 URI
+                        // TRON 官方文档建议使用 chainId 1（以太坊主网）来触发 WalletConnect 兼容性，
+                        // 然后钱包自行切换到 TRON 网络，或者使用特定 bridge。
+                        // 这里我们使用 chainId 1，让 TP/OKX 遵循标准流程。
+                        await this.wcClient.createSession({ chainId: 1 });
+                        this.wcUri = this.wcClient.uri;
+                        this.renderWCQRCode(this.wcUri);
 
                     } catch (e) {
-                        console.error("WalletConnect Error:", e);
-                        alert("WalletConnect 启动失败。请刷新重试。");
+                        console.error("WalletConnect 启动失败:", e);
+                        alert("WalletConnect 启动失败。请确保您已加载 WalletConnect 库，并检查浏览器控制台错误。");
                         this.wcModalOpen = false;
                     }
                 },
@@ -298,8 +305,9 @@
                         this.wallet = session.accounts[0]; 
                         this.wcModalOpen = false;
                         this.btnText = "已连接 (WC)";
-                        alert(`WalletConnect 连接成功！地址: ${this.shortAddr(this.wallet)}\n\n⚠️ 警告: 交易功能仍依赖 TronLink，此连接仅用于地址显示。`);
-                        this.stopPolling(); // 停止 TronLink 轮询
+                        this.balance = '?.??'; // 无法获取 TRX 余额，因为没有 TronWeb 权限
+                        alert(`WalletConnect 连接成功！地址: ${this.shortAddr(this.wallet)}\n\n⚠️ 警告: 交易功能仍依赖 TronLink，请勿尝试下注/众筹。`);
+                        this.stopPolling(); 
                     }
                 },
 
@@ -307,7 +315,7 @@
                 renderWCQRCode(uri) {
                     const box = document.getElementById("wc-qrcode-container");
                     if(box) { 
-                        box.innerHTML = ""; // 清空加载动画
+                        box.innerHTML = ""; 
                         new QRCode(box, { 
                             text: uri, 
                             width: 160, 
@@ -322,7 +330,11 @@
                 // 🌟 断开 WalletConnect 连接
                 async disconnectWC() {
                     if (this.wcClient && this.wcClient.connected) {
-                        await this.wcClient.killSession();
+                        try {
+                            await this.wcClient.killSession();
+                        } catch (e) {
+                            console.warn("WC killSession failed:", e);
+                        }
                     }
                     this.wcClient = null;
                     this.wcUri = '';
@@ -350,6 +362,7 @@
                 // --- 强制检查函数 (仅检查 TronLink 注入) ---
                 async forceCheckWallet() {
                     if (window.tronWeb && window.tronWeb.ready) {
+                        // TronLink 处于连接状态
                         if (this.wallet !== window.tronWeb.defaultAddress.base58) {
                             this.wallet = window.tronWeb.defaultAddress.base58;
                             this.btnText = "已连接";
@@ -359,7 +372,7 @@
                             } catch(e) {}
                         }
                     } else {
-                        // 如果 TronLink 掉线，且当前不是 WalletConnect 连接状态
+                        // TronLink 掉线，且当前不是 WalletConnect 连接状态
                         if (this.wcClient === null || !this.wcClient.connected) {
                             this.wallet = '';
                             this.balance = '0.00';
@@ -379,6 +392,10 @@
                         this.btnText = "连接钱包";
                         return;
                     }
+                    // 如果当前是 WC 连接，先断开
+                    if (this.wcClient && this.wcClient.connected) {
+                         this.disconnectWC();
+                    }
 
                     try {
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
@@ -397,8 +414,8 @@
                     this.walletSelectModalOpen = false;
                     this.wcModalOpen = true; 
                     this.btnText = "连接中..."; 
-
-                    // 启动 WalletConnect 流程 (在 $watch('wcModalOpen') 中调用 initializeWC)
+                    
+                    // initializeWC 会在 $watch 中被调用，生成 QR 码
                 },
 
                 // --- 断开钱包 (通用) ---
@@ -412,7 +429,7 @@
                     }
                 },
                 
-                // --- 其他 DApp 逻辑 (保持不变) ---
+                // --- 其他 DApp 逻辑 (注意兼容性警告) ---
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
