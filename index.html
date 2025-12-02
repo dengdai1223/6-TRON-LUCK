@@ -23,38 +23,39 @@
         .feature-card { border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
         .modal-bg { background-color: rgba(0, 0, 0, 0.7); }
     </style>
-    
-    <script>
-        const CONFIG = {
-            receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm",
-            contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"
-        };
-        
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // 定义为 window.app，供 x-data="app" 使用
+    <script>
+        // 将配置和工具函数也封装到 app 内部或作为局部变量
+
         window.app = function() {
+            // 核心配置 (现在是 app 内部的常量，通过 this.config 访问)
+            const CONFIG = {
+                receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm",
+                contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"
+            };
+            
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            
             return {
                 // --- 状态变量 ---
                 activeTab: 'home',
                 investType: 'equity',
                 gameModalOpen: false,
-                walletSelectModalOpen: false, 
+                walletSelectModalOpen: false, // 解决了 ReferenceError: walletSelectModalOpen is not defined
                 playMode: 'web3',
-                wallet: '', // 核心：存储地址
+                wallet: '', 
                 balance: '0.00',
                 betAmount: 10,
                 investAmount: '',
                 btnText: '连接钱包',
-                config: CONFIG,
-                checkIntervalId: null, // 稳定检查 ID
+                config: CONFIG, // 解决了 ReferenceError: config is not defined
+                checkIntervalId: null, 
                 
                 // --- 优化的初始化函数 ---
                 init() {
                     console.log("Starting Engine in Passive Mode...");
                     
                     if (window.tronWeb) {
-                        // 监听 TronLink/兼容钱包的账户或网络变化事件
                         window.addEventListener('message', e => {
                             if (e.data.message && (e.data.message.action === 'setAccount' || e.data.message.action === 'setNode')) {
                                 console.log('Wallet state changed via event. Checking connection...');
@@ -63,10 +64,8 @@
                         });
                     }
                     
-                    // 1. 启动稳定检查
                     this.startTronWebCheck(); 
                     
-                    // 2. 立即检查一次初始状态 (延迟确保 TronWeb 已注入)
                     setTimeout(() => {
                         this.forceCheckWallet();
                     }, 500); 
@@ -90,7 +89,6 @@
                 
                 // --- 强制检查函数 (通用检查 - 最终稳定版) --- 
                 async forceCheckWallet() {
-                    // 获取 $nextTick 或使用 setTimeout 替代
                     const nextTick = window.Alpine ? window.Alpine.nextTick : (callback) => setTimeout(callback, 0);
                 
                     if (window.tronWeb && window.tronWeb.ready) {
@@ -100,7 +98,6 @@
                             this.wallet = currentAddr;
                             this.btnText = "已连接";
                             
-                            // 使用 $nextTick 确保 DOM 在数据更新后刷新
                             await nextTick(async () => { 
                                 try {
                                     const bal = await window.tronWeb.trx.getBalance(this.wallet);
@@ -123,9 +120,8 @@
                 },
 
                 // 🌟 连接钱包的核心函数 (已修复超时逻辑) 🌟
-                // 🌟 优化的通用连接入口 (最终稳定版 - 解决 request is not a function) 🌟
                 async connectWallet() {
-                    this.stopTronWebCheck(); // 尝试连接前先停止检查
+                    this.stopTronWebCheck(); 
                     
                     this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
@@ -137,30 +133,27 @@
                         return;
                     }
                     
-                    // 【关键修改】等待 TronWeb 彻底就绪，并检查 request 方法是否可用
                     const maxRetries = 10;
                     let retries = 0;
                     
-                    // 检查 TronWeb 是否完全就绪
                     while ((!window.tronWeb || !window.tronWeb.ready || typeof window.tronWeb.request !== 'function') && retries < maxRetries) {
                         this.btnText = `正在等待钱包同步 (${retries + 1}/${maxRetries})...`;
-                        await delay(300); // 每次等待 300 毫秒
+                        await delay(300); 
                         retries++;
                     }
-                
+
                     if (retries === maxRetries) {
                         this.btnText = "连接钱包";
                         alert("钱包 Web3 对象加载失败。请刷新页面，并确保只启用了 TronLink 插件。");
                         this.startTronWebCheck();
                         return;
                     }
-                
-                    this.startTronWebCheck(); // 重新启动稳定检查
+
+                    this.startTronWebCheck(); 
                     
                     try {
                         this.btnText = "请求授权...";
                         
-                        // 1. 调用 request 方法
                         const requestResult = await window.tronWeb.request({ method: 'tron_requestAccounts' }); 
                         
                         if (requestResult && requestResult.code && requestResult.code !== 200) {
@@ -169,26 +162,23 @@
                         
                         this.btnText = "等待同步...";
                         
-                        // 2. 延迟等待 1 秒，确保地址被注入
                         await delay(1000); 
-                
-                        // 3. 强制执行一次同步检查
+
                         await this.forceCheckWallet(); 
                         
-                        // 4. 最终状态判断
                         if (!this.wallet) {
                             this.btnText = "连接钱包";
                             alert("钱包连接超时或用户取消授权。请检查您的 TronLink 插件是否已解锁，并且授权页面已被确认。");
                         } else {
                             console.log("Wallet connected successfully after authorization and delay.");
                         }
-                
+
                     } catch(e) {
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
                         alert("连接请求失败：" + e.message);
                     }
-                }
+                },
 
 
                 // --- 断开钱包 (通用) ---
@@ -204,11 +194,13 @@
                     this.gameModalOpen = true;
                     setTimeout(() => {
                         const box = document.getElementById("qrcode-container");
-                        if(box) { box.innerHTML = ""; new QRCode(box, { text: CONFIG.receiveAddr, width: 140, height: 140 }); }
+                        // 使用 this.config 访问
+                        if(box) { box.innerHTML = ""; new QRCode(box, { text: this.config.receiveAddr, width: 140, height: 140 }); } 
                     }, 100);
                 },
                 shortAddr(addr) { return addr ? addr.slice(0,4) + '...' + addr.slice(-4) : ''; },
-                copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
+                // 使用 this.config 访问
+                copyAddr() { navigator.clipboard.writeText(this.config.receiveAddr); alert("地址已复制"); }, 
                 async doBet(guess) {
                     if(!this.wallet) return alert("请先连接钱包！！！！");
                     if (!window.tronWeb) return alert("交易失败：未检测到 TRON 钱包 Web3 对象。请确保插件已连接。");
@@ -226,7 +218,8 @@
 
                     if(!this.investAmount) return alert("请输入金额");
                     try {
-                        let contract = await window.tronWeb.contract().at(CONFIG.contractAddr);
+                        // 使用 this.config 访问
+                        let contract = await window.tronWeb.contract().at(this.config.contractAddr); 
                         await contract.invest().send({ callValue: window.tronWeb.toSun(this.investAmount) });
                         alert("🎉 众筹成功！");
                     } catch(e) { alert("交易失败: " + e.message); }
