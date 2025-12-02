@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TronLuck | AAAA去中心化游戏金融协议！！！！</title>
     
-    <!-- 使用相对路径，解决跨域问题 -->
     <link rel="manifest" href="manifest.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -108,7 +107,6 @@
         </div>
     </nav>
 
-    <!-- 游戏弹窗 -->
     <div x-show="gameModalOpen" class="fixed inset-0 z-[60] bg-bg flex flex-col" x-transition>
         <div class="h-14 px-4 flex items-center justify-between border-b border-gray-800 bg-surface"><button @click="gameModalOpen = false" class="text-gray-400"><i class="fa-solid fa-arrow-left"></i> 返回</button><span class="font-bold">哈希猜单双</span><div class="w-8"></div></div>
         <div class="flex-1 overflow-y-auto p-4 space-y-6">
@@ -134,6 +132,7 @@
         </div>
     </div>
 
+
     <script>
         const CONFIG = {
             receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm",
@@ -155,87 +154,96 @@
                 config: CONFIG,
                 
                 init() {
-                    console.log("App initialized. Waiting for user interaction.");
-                    
-                    // 1. 设置事件监听 (这是最安全的方式，不会触发弹窗)
+                    // 初始化监听，但不主动请求，避免弹窗
                     window.addEventListener('message', (e) => {
-                        if (e.data.message && e.data.message.action == "setAccount") {
-                            console.log("Wallet account changed:", e.data.message);
-                            // 只有当已经连接过，或者钱包明确发出信号时，才去更新
-                            this.checkLoginStatus(); 
-                        }
-                        if (e.data.message && e.data.message.action == "setNode") {
-                            this.checkLoginStatus();
+                        if (e.data.message && (e.data.message.action == "setAccount" || e.data.message.action == "setNode")) {
+                             // 只有当用户已经连接过，或者钱包发来信号时才更新
+                             // 针对刷新后显示未连接的问题：
+                             this.waitForAddress(); 
                         }
                     });
 
-                    // 2. 页面加载延迟检查，但不强制读取 defaultAddress，避免弹窗
+                    // 页面加载 1秒后，悄悄检查一下（TokenPocket 初始化比较慢）
                     setTimeout(() => {
-                        if (window.tronWeb && window.tronWeb.ready) {
-                            // 只有明确 ready 了才读，否则装聋作哑
-                            this.checkLoginStatus();
+                        if (window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58) {
+                            this.waitForAddress(); // 如果已经有地址了，直接读
                         }
                     }, 1000);
                 },
 
-                // 安全的检查状态函数，绝不强制弹窗
-                async checkLoginStatus() {
-                    if (!window.tronWeb || !window.tronWeb.ready) {
-                        // 如果钱包没准备好，直接退出，不要尝试读取 defaultAddress
-                        // 读取未解锁的 defaultAddress 会导致 TokenPocket 疯狂弹窗
-                        return;
-                    }
-
-                    try {
-                        // 此时认为已解锁，可以安全读取
-                        const currentAddr = window.tronWeb.defaultAddress.base58;
-                        if (currentAddr) {
-                            this.wallet = currentAddr;
-                            this.btnText = "已连接";
-                            const bal = await window.tronWeb.trx.getBalance(currentAddr);
-                            this.balance = (bal / 1e6).toFixed(2);
-                        }
-                    } catch(e) {
-                        console.warn("Silent check failed:", e);
-                    }
-                },
-
-                // 只有用户点击按钮时，才真正触发请求
-                async connectWallet() {
-                    this.walletSelectModalOpen = false;
-                    this.btnText = "连接中...";
+                // 核心修复：专门针对 TP 的耐心等待函数
+                // 它会每秒检查一次，直到读到地址，或者超时
+                waitForAddress() {
+                    let attempts = 0;
+                    const maxAttempts = 10; // 最多等 10 秒
                     
-                    if (!window.tronWeb) {
-                        alert("未检测到钱包插件。");
-                        this.btnText = "连接钱包";
-                        return;
-                    }
-
-                    try {
-                        // 主动请求连接
-                        if (window.tronWeb.request) {
-                            await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                        } else {
-                            // 旧版逻辑，如果没有 request 方法，且 not ready，提示用户手动开
-                            if (!window.tronWeb.ready) {
-                                alert("请打开钱包插件并输入密码解锁");
-                                this.btnText = "连接钱包";
-                                return;
+                    const checkInterval = setInterval(async () => {
+                        attempts++;
+                        
+                        // 1. 检查 tronWeb 是否存在
+                        if (window.tronWeb) {
+                            // 2. 尝试读取地址
+                            if (window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58) {
+                                // 成功读取到地址！
+                                const addr = window.tronWeb.defaultAddress.base58;
+                                // 过滤掉无效地址（TP有时会返回 false）
+                                if (addr !== false && addr !== "false") {
+                                    this.wallet = addr;
+                                    this.btnText = "已连接";
+                                    
+                                    try {
+                                        const bal = await window.tronWeb.trx.getBalance(this.wallet);
+                                        this.balance = (bal / 1e6).toFixed(2);
+                                    } catch(e) {}
+                                    
+                                    clearInterval(checkInterval); // 任务完成，停止轮询
+                                    return;
+                                }
                             }
                         }
 
-                        // 连接成功后，手动触发一次检查
-                        setTimeout(() => this.checkLoginStatus(), 500);
+                        // 如果尝试 10 次还没拿到地址，说明真的没连上
+                        if (attempts >= maxAttempts) {
+                            clearInterval(checkInterval);
+                            // 只有在“连接中”的状态下才重置按钮，如果本来就是静默检查就不管
+                            if (this.btnText === "连接中...") {
+                                this.btnText = "连接钱包";
+                                // 可以在这里提示用户刷新，但通常不需要
+                            }
+                        }
+                    }, 1000); // 每 1 秒查一次
+                },
+
+                async connectWallet() {
+                    this.walletSelectModalOpen = false;
+                    this.btnText = "连接中..."; // 设置为连接中，防止用户以为没反应
+                    
+                    if (!window.tronWeb) {
+                        alert("未检测到波场钱包插件。");
+                        this.btnText = "连接钱包";
+                        return;
+                    }
+
+                    try {
+                        // 1. 发起请求 (TP 也会响应这个)
+                        // 注意：TP 这里不一定会 await 回来，或者 await 回来时 ready 还是 false
+                        if (window.tronWeb.request) {
+                            await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                        }
+                        
+                        // 2. 关键点：不管 request 结果如何，立刻开始轮询查地址
+                        // TP 授权后需要一点时间同步数据
+                        this.waitForAddress();
 
                     } catch(e) {
                         console.error(e);
-                        // 4001 是用户关闭了窗口
+                        // 如果明确拒绝了，才恢复按钮
                         if (e.code === 4001) {
-                            // 用户关了窗口，我们什么都不做，恢复按钮状态即可
+                            this.btnText = "连接钱包";
                         } else {
-                            // 其他错误
+                            // 其他报错也尝试查一下，万一连上了呢
+                            this.waitForAddress();
                         }
-                        this.btnText = "连接钱包";
                     }
                 },
 
@@ -243,7 +251,6 @@
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    // 断开不需要停止轮询，因为我们已经移除了轮询
                 },
                 
                 openGame(type) {
@@ -260,28 +267,16 @@
                 copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
                 
                 async doBet(guess) {
-                    if(!this.wallet) {
-                        // 未连接时点击下注，尝试触发连接
-                        this.walletSelectModalOpen = true;
-                        return;
-                    }
-                    if (!window.tronWeb || !window.tronWeb.trx) return alert("钱包连接异常");
-                    
+                    if(!this.wallet) { this.walletSelectModalOpen = true; return; }
                     let amountSun = window.tronWeb.toSun(this.betAmount);
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
                     try {
                         const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
                         alert("✅ 下注成功！");
-                    } catch(e) { 
-                        console.error(e);
-                    }
+                    } catch(e) { console.error(e); }
                 },
-                
                 async doInvest() {
-                    if(!this.wallet) {
-                         this.walletSelectModalOpen = true;
-                         return;
-                    }
+                    if(!this.wallet) { this.walletSelectModalOpen = true; return; }
                     if(!this.investAmount) return alert("请输入金额");
                     try {
                         let contract = await window.tronWeb.contract().at(CONFIG.contractAddr);
