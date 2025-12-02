@@ -126,10 +126,26 @@
                 <i class="fa-solid fa-check-circle text-primary"></i>
             </button>
             
-            <button @click="alert('当前 DApp 运行于波场网络，WalletConnect 支持正在集成中，请使用 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+            <button @click="alert('当前 DApp 运行于波场网络，请使用 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+                <div class="flex items-center gap-3">
+                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/okx.png" class="w-6 h-6 rounded-full" alt="OKX Wallet">
+                    <span class="font-semibold text-sm">OKX Wallet (欧易钱包)</span>
+                </div>
+                <i class="fa-solid fa-link text-gray-500"></i>
+            </button>
+
+            <button @click="alert('当前 DApp 运行于波场网络，请使用 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+                <div class="flex items-center gap-3">
+                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/tokenpocket.png" class="w-6 h-6 rounded-full" alt="TokenPocket">
+                    <span class="font-semibold text-sm">TokenPocket</span>
+                </div>
+                <i class="fa-solid fa-link text-gray-500"></i>
+            </button>
+
+            <button @click="alert('WalletConnect 支持正在集成中，请使用 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
                 <div class="flex items-center gap-3">
                     <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/walletconnect.png" class="w-6 h-6 rounded-full" alt="WalletConnect">
-                    <span class="font-semibold text-sm">WalletConnect (敬请期待)</span>
+                    <span class="font-semibold text-sm">WalletConnect</span>
                 </div>
                 <i class="fa-solid fa-link text-gray-500"></i>
             </button>
