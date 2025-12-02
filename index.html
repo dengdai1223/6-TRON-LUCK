@@ -251,6 +251,10 @@
             contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"  // 众筹合约
         };
 
+
+
+
+
         function app() {
             return {
                 activeTab: 'home',
@@ -262,66 +266,98 @@
                 investAmount: '',
                 config: CONFIG,
                 
+                // --- 初始化：自动启动检测 ---
                 init() { 
-                    // 延迟检查钱包，等待 TronLink 注入
-                    setTimeout(() => this.checkWallet(), 1000); 
+                    console.log("App 初始化...");
+                    // 页面加载后，尝试自动检测钱包
+                    // 有些钱包注入慢，我们给它 3 秒缓冲
+                    let tries = 0;
+                    const timer = setInterval(() => {
+                        this.checkWallet();
+                        tries++;
+                        if (this.wallet || tries > 10) clearInterval(timer);
+                    }, 500); 
                 },
 
-                // 打开游戏
-                openGame(type) {
-                    this.gameModalOpen = true;
-                    setTimeout(() => {
-                        document.getElementById("qrcode-container").innerHTML = "";
-                        new QRCode(document.getElementById("qrcode-container"), { text: CONFIG.receiveAddr, width: 140, height: 140 });
-                    }, 100);
-                },
-
-                // 连接钱包
+                // --- 核心：万能连接逻辑 (修复版) ---
                 async connectWallet() {
-                    if (window.tronWeb) {
-                        const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                        if(res.code === 200) this.wallet = window.tronWeb.defaultAddress.base58;
-                    } else alert("请安装 TronLink 插件或在 TokenPocket 中打开");
-                },
+                    console.log("正在尝试连接钱包...");
 
-                checkWallet() {
-                    if(window.tronWeb && window.tronWeb.ready) this.wallet = window.tronWeb.defaultAddress.base58;
-                },
+                    // 1. 检测是否安装了钱包插件
+                    if (!window.tronWeb) {
+                        alert("⚠️ 未检测到波场钱包！\n\n电脑端：请安装 TronLink 插件。\n手机端：请在 TokenPocket/ImToken 的【发现】浏览器中打开本网页。");
+                        return;
+                    }
 
-                shortAddr(addr) { return addr.slice(0,4) + '...' + addr.slice(-4); },
-                
-                copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
-
-                // 核心：Web3 下注逻辑
-                async doBet(guess) {
-                    if(!this.wallet) return alert("请先连接钱包");
-                    
-                    // 金额微调：押单+1sun，押双+2sun，方便后端识别
-                    // 1 TRX = 1,000,000 SUN
-                    let amountSun = window.tronWeb.toSun(this.betAmount);
-                    let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
-                    
+                    // 2. 尝试请求账户授权 (新版 TronLink 标准)
                     try {
-                        const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
-                        alert("✅ 下注交易已发送！\n等待区块确认后自动派奖。");
-                    } catch(e) {
-                        console.error(e);
-                        alert("交易取消");
+                        if (window.tronWeb.request) {
+                            console.log("尝试 request 请求...");
+                            const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                            if (res.code === 200) {
+                                // 连接成功
+                                this.wallet = window.tronWeb.defaultAddress.base58;
+                                return; // 结束
+                            }
+                        }
+                    } catch (e) {
+                        console.error("request 连接失败，尝试旧版方法", e);
+                    }
+
+                    // 3. 兜底方案 (旧版检测逻辑 & TP钱包逻辑)
+                    // 如果钱包已经解锁，tronWeb.ready 会变成 true
+                    if (window.tronWeb.ready && window.tronWeb.defaultAddress.base58) {
+                        this.wallet = window.tronWeb.defaultAddress.base58;
+                    } else {
+                        // 如果有 tronWeb 但没 ready，说明可能没解锁
+                        alert("⚠️ 连接失败或钱包未解锁！\n\n请点击浏览器右上角的钱包插件，输入密码解锁后，刷新页面重试。");
+                    }
+                },
+                
+                // --- 被动检查状态 ---
+                checkWallet() {
+                    // 如果已经连接过，自动同步状态
+                    if(window.tronWeb && window.tronWeb.ready) {
+                        this.wallet = window.tronWeb.defaultAddress.base58;
                     }
                 },
 
-                // 核心：Web3 众筹逻辑
+                // 其他函数保持不变...
+                openGame(type) {
+                    this.gameModalOpen = true;
+                    setTimeout(() => {
+                        const container = document.getElementById("qrcode-container");
+                        if(container) {
+                            container.innerHTML = "";
+                            new QRCode(container, { text: CONFIG.receiveAddr, width: 140, height: 140 });
+                        }
+                    }, 100);
+                },
+                
+                shortAddr(addr) { return addr ? addr.slice(0,4) + '...' + addr.slice(-4) : ''; },
+                
+                copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
+
+                async doBet(guess) {
+                    if(!this.wallet) return alert("请先连接钱包");
+                    let amountSun = window.tronWeb.toSun(this.betAmount);
+                    let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
+                    try {
+                        const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
+                        alert("✅ 下注成功！等待派奖。");
+                    } catch(e) {
+                        console.error(e);
+                        alert("交易取消或失败: " + e);
+                    }
+                },
+
                 async doInvest() {
                     if(!this.wallet) return alert("请先连接钱包");
                     if(!this.investAmount) return alert("请输入金额");
-                    
                     try {
                         let contract = await window.tronWeb.contract().at(CONFIG.contractAddr);
-                        // 调用 invest 函数
-                        await contract.invest().send({
-                            callValue: window.tronWeb.toSun(this.investAmount)
-                        });
-                        alert("🎉 众筹成功！您已成为股东。");
+                        await contract.invest().send({ callValue: window.tronWeb.toSun(this.investAmount) });
+                        alert("🎉 众筹成功！");
                     } catch(e) {
                         console.error(e);
                         alert("交易失败: " + (e.message || "未知错误"));
@@ -329,6 +365,12 @@
                 }
             }
         }
+
+
+
+
+        
     </script>
 </body>
+
 </html>
