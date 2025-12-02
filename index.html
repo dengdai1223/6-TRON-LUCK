@@ -219,8 +219,11 @@
                     }
                 },
 
-                // 🌟 优化的通用连接入口 🌟
+                // 🌟 优化的通用连接入口 🌟// 🌟 优化的通用连接入口 (更彻底的重置) 🌟
                 async connectWallet() {
+                    // 确保任何旧的轮询停止，以防状态混乱
+                    this.stopPolling();
+                    
                     this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
                     
@@ -234,20 +237,19 @@
                     this.startPolling(); 
                     
                     try {
-                        // 1. 请求连接/授权，弹窗在此刻弹出
+                        // 1. 请求连接/授权
                         await window.tronWeb.request({ method: 'tron_requestAccounts' }); 
                         
-                        this.btnText = "等待授权/解锁...";
+                        this.btnText = "11111等待授权/解锁...";
                         
-                        // 2. 增加延迟和超时检查，确保地址更新被捕获
+                        // 2. 增加延迟和超时检查 (最多等待 5 秒)
                         let checkCount = 0;
-                        const maxChecks = 10; // 检查 10 次，最多等待 5 秒 (10 * 500ms)
+                        const maxChecks = 10; 
                         
                         // 立即执行一次检查
                         this.forceCheckWallet(); 
-
+                
                         while (!this.wallet && checkCount < maxChecks) {
-                            // 等待 500ms
                             await delay(500); 
                             this.forceCheckWallet();
                             checkCount++;
@@ -257,16 +259,18 @@
                              // 如果等待超时仍未连接
                             this.btnText = "连接钱包";
                             alert("钱包连接超时或用户取消授权。请检查您的 TronLink 插件是否已解锁。");
-                            this.stopPolling();
+                            // 确保彻底停止轮询
+                            this.stopPolling(); 
                         } else {
-                            // 成功连接，状态已在 forceCheckWallet 中更新
                             console.log("Wallet connected successfully after authorization.");
                         }
-
+                
                     } catch(e) {
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
                         alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
+                        // 确保彻底停止轮询
+                        this.stopPolling(); 
                     }
                 },
 
