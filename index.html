@@ -140,12 +140,12 @@
             contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"
         };
         
-        // **新增工具函数：用于引入延迟**
+        // 新增工具函数：用于引入延迟
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         function app() {
             return {
-                // --- 状态变量 (保持不变) ---
+                // --- 状态变量 ---
                 activeTab: 'home',
                 investType: 'equity',
                 gameModalOpen: false,
@@ -159,25 +159,28 @@
                 config: CONFIG,
                 pollingId: null, 
                 
-                // --- 初始化 (保持不变) ---
+                // --- 优化的初始化函数 ---
                 init() {
                     console.log("Starting Engine in Passive Mode...");
+                    
                     if (window.tronWeb) {
+                        // 监听 TronLink/兼容钱包的账户或网络变化事件
                         window.addEventListener('message', e => {
                             if (e.data.message && (e.data.message.action === 'setAccount' || e.data.message.action === 'setNode')) {
                                 console.log('Wallet state changed via event. Checking connection...');
-                                if(this.pollingId) {
-                                    // 状态变化时，强制检查一次，避免等待轮询周期
-                                    this.forceCheckWallet(); 
-                                }
+                                this.forceCheckWallet(); 
                             }
                         });
                     }
-                    // 页面加载后自动尝试检查连接状态 (启动轮询)
-                    this.startPolling();
+                    
+                    // 1. 页面加载后启动轮询
+                    this.startPolling(); 
+                    
+                    // 2. 【关键优化】立即执行一次检查，捕获钱包的初始状态
+                    this.forceCheckWallet(); 
                 },
 
-                // --- 轮询开关 (保持不变) --- 
+                // --- 轮询开关 --- 
                 startPolling() {
                     if (this.pollingId) return; 
                     this.pollingId = setInterval(() => {
@@ -193,24 +196,25 @@
                     }
                 },
 
-                // --- 强制检查函数 (保持不变) ---
+                // --- 强制检查函数 (通用检查) ---
                 async forceCheckWallet() {
                     if (window.tronWeb && window.tronWeb.ready) {
                         const currentAddr = window.tronWeb.defaultAddress.base58;
 
+                        // 只有当检测到的地址与当前记录的地址不一致时，才更新状态和余额
                         if (this.wallet !== currentAddr) {
                             this.wallet = currentAddr;
                             this.btnText = "已连接";
                             try {
                                 const bal = await window.tronWeb.trx.getBalance(this.wallet);
                                 this.balance = (bal / 1e6).toFixed(2);
-                                this.startPolling(); 
                             } catch(e) {
                                 this.balance = '?.??';
                                 console.error("无法获取余额:", e);
                             }
                         }
                     } else {
+                        // 如果 window.tronWeb 不存在或未准备好，重置本地状态
                         if (this.wallet) {
                             this.wallet = '';
                             this.balance = '0.00';
@@ -219,10 +223,9 @@
                     }
                 },
 
-                // 🌟 优化的通用连接入口 🌟// 🌟 优化的通用连接入口 (更彻底的重置) 🌟
+                // 🌟 优化的通用连接入口 (带超时重置) 🌟
                 async connectWallet() {
-                    // 确保任何旧的轮询停止，以防状态混乱
-                    this.stopPolling();
+                    this.stopPolling(); // 尝试连接前先停止轮询，防止干扰
                     
                     this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
@@ -233,22 +236,20 @@
                         return;
                     }
                     
-                    // 确保轮询开始，以便在授权窗口关闭后能捕获地址更新
-                    this.startPolling(); 
+                    this.startPolling(); // 重新启动轮询
                     
                     try {
-                        // 1. 请求连接/授权
+                        // 1. 请求连接/授权，弹窗在此刻弹出
                         await window.tronWeb.request({ method: 'tron_requestAccounts' }); 
                         
-                        this.btnText = "11111等待授权/解锁...";
+                        this.btnText = "等待授权/解锁...";
                         
                         // 2. 增加延迟和超时检查 (最多等待 5 秒)
                         let checkCount = 0;
                         const maxChecks = 10; 
                         
-                        // 立即执行一次检查
                         this.forceCheckWallet(); 
-                
+
                         while (!this.wallet && checkCount < maxChecks) {
                             await delay(500); 
                             this.forceCheckWallet();
@@ -259,22 +260,21 @@
                              // 如果等待超时仍未连接
                             this.btnText = "连接钱包";
                             alert("钱包连接超时或用户取消授权。请检查您的 TronLink 插件是否已解锁。");
-                            // 确保彻底停止轮询
                             this.stopPolling(); 
                         } else {
                             console.log("Wallet connected successfully after authorization.");
+                            // 连接成功后，forceCheckWallet() 会更新 this.btnText 为 "已连接"
                         }
-                
+
                     } catch(e) {
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
                         alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
-                        // 确保彻底停止轮询
                         this.stopPolling(); 
                     }
                 },
 
-                // --- 断开钱包 (保持不变) ---
+                // --- 断开钱包 (通用) ---
                 disconnect() {
                     this.stopPolling();
                     this.wallet = '';
