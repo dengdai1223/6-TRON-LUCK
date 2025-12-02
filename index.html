@@ -119,13 +119,27 @@
             <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-3">选择钱包进行连接</h3>
             
             <button @click="connectTronLink()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition">
-                <span class="font-semibold text-sm">TronLink 插件/App</span>
-                <i class="fa-solid fa-plug text-primary"></i>
+                <div class="flex items-center gap-3">
+                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/tron.png" class="w-6 h-6 rounded-full" alt="TronLink">
+                    <span class="font-semibold text-sm">TronLink (推荐)</span>
+                </div>
+                <i class="fa-solid fa-check-circle text-primary"></i>
             </button>
             
-            <button @click="alert('抱歉，当前仅支持 TronLink 钱包，请确保您的 TronLink 已安装。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-60 cursor-not-allowed">
-                <span class="font-semibold text-sm">其他钱包/WalletConnect</span>
-                <i class="fa-solid fa-qrcode text-gray-500"></i>
+            <button @click="alert('当前 DApp 运行于波场网络，WalletConnect 支持正在集成中，请使用 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+                <div class="flex items-center gap-3">
+                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/walletconnect.png" class="w-6 h-6 rounded-full" alt="WalletConnect">
+                    <span class="font-semibold text-sm">WalletConnect (敬请期待)</span>
+                </div>
+                <i class="fa-solid fa-link text-gray-500"></i>
+            </button>
+
+            <button @click="alert('当前 DApp 运行于波场网络，MetaMask 仅支持 EVM 网络，无法进行波场交易。请安装 TronLink 钱包。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
+                <div class="flex items-center gap-3">
+                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/metamask.png" class="w-6 h-6 rounded-full" alt="MetaMask">
+                    <span class="font-semibold text-sm">MetaMask / EVM 钱包</span>
+                </div>
+                <i class="fa-solid fa-xmark-circle text-red-500"></i>
             </button>
 
             <button @click="walletSelectModalOpen = false" class="w-full text-xs text-gray-400 hover:text-white pt-2">取消</button>
@@ -144,7 +158,7 @@
                 activeTab: 'home',
                 investType: 'equity',
                 gameModalOpen: false,
-                walletSelectModalOpen: false, // 新增：钱包选择弹窗状态
+                walletSelectModalOpen: false, // 钱包选择弹窗状态
                 playMode: 'web3',
                 wallet: '',
                 balance: '0.00',
@@ -207,7 +221,7 @@
                     }
                 },
 
-                // --- 核心：TronLink 连接逻辑 (取代旧的 manualConnect) ---
+                // --- 核心：TronLink 连接逻辑 ---
                 async connectTronLink() {
                     this.walletSelectModalOpen = false; // 关闭选择弹窗
                     this.btnText = "连接中...";
@@ -233,7 +247,7 @@
                     }
                 },
 
-                // 旧的 manualConnect 现在用于打开弹窗
+                // --- 顶部按钮点击事件：打开选择弹窗 ---
                 manualConnect() {
                     this.walletSelectModalOpen = true;
                 },
