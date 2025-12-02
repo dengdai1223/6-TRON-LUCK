@@ -126,33 +126,15 @@
                 <i class="fa-solid fa-arrow-right text-primary"></i>
             </button>
             
-            <button @click="connectWallet()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-90">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-full bg-yellow-600/20 text-yellow-500 flex items-center justify-center"><i class="fa-solid fa-briefcase text-sm"></i></div>
-                    <span class="font-semibold text-sm">OKX Wallet (插件)</span>
-                </div>
-                <i class="fa-solid fa-arrow-right text-gray-500"></i>
-            </button>
-
-            <button @click="connectWallet()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-90">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center"><i class="fa-solid fa-key text-sm"></i></div>
-                    <span class="font-semibold text-sm">TokenPocket (插件)</span>
-                </div>
-                <i class="fa-solid fa-arrow-right text-gray-500"></i>
-            </button>
-
-            <button @click="alert('当前 DApp 运行于波场（Tron）网络，您的钱包插件必须处于波场网络模式才能连接。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-70">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-full bg-orange-600/20 text-orange-400 flex items-center justify-center"><i class="fa-solid fa-mask text-sm"></i></div>
-                    <span class="font-semibold text-sm">其他 TRON 兼容钱包</span>
-                </div>
-                <i class="fa-solid fa-info-circle text-gray-500"></i>
-            </button>
+            <div class="bg-gray-900 p-3 rounded-lg text-xs text-gray-400 mt-4 border border-gray-700">
+                <i class="fa-solid fa-info-circle text-purple-400 mr-1"></i>
+                TokenPocket/OKX Wallet 等其他 TRON 钱包插件若想连接，需要确保**它们是浏览器中唯一激活的 TRON 插件**。
+            </div>
 
             <button @click="walletSelectModalOpen = false" class="w-full text-xs text-gray-400 hover:text-white pt-2">取消</button>
         </div>
     </div>
+
 
     <script>
         const CONFIG = {
@@ -215,7 +197,7 @@
 
                 // --- 强制检查函数 (通用检查) ---
                 async forceCheckWallet() {
-                    // 检查 window.tronWeb 是否存在且已准备好
+                    // 检查 window.tronWeb 是否存在且已准备好 (这是所有 TRON 插件的统一入口)
                     if (window.tronWeb && window.tronWeb.ready) {
                         const currentAddr = window.tronWeb.defaultAddress.base58;
 
@@ -225,7 +207,7 @@
                             try {
                                 const bal = await window.tronWeb.trx.getBalance(this.wallet);
                                 this.balance = (bal / 1e6).toFixed(2);
-                                this.startPolling(); // 确保正在轮询
+                                this.startPolling(); 
                             } catch(e) {
                                 this.balance = '?.??';
                                 console.error("无法获取余额:", e);
@@ -234,7 +216,6 @@
                     } else {
                         // 如果 window.tronWeb 不存在或未准备好
                         if (this.wallet) {
-                            // 只有当之前连接过，现在断开时才重置状态
                             this.wallet = '';
                             this.balance = '0.00';
                             this.btnText = "连接钱包";
@@ -242,13 +223,13 @@
                     }
                 },
 
-                // 🌟 通用连接入口 (适用于 TronLink/OKX/TP 插件)
+                // 🌟 通用连接入口 (现在仅针对 TronLink)
                 async connectWallet() {
                     this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
                     
                     if (!window.tronWeb) {
-                        alert("未检测到 TRON 兼容钱包插件（如 TronLink, OKX Wallet, TokenPocket），请确保您已安装并切换到 TRON 网络。");
+                        alert("未检测到 TronLink 钱包插件。请确保您已安装并切换到 TRON 网络。");
                         this.btnText = "连接钱包";
                         return;
                     }
@@ -257,12 +238,12 @@
                         // 请求连接/授权
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
                         this.btnText = "等待授权/解锁..."; 
-                        this.startPolling(); // 启动轮询以获取最新地址和余额
+                        this.startPolling(); 
 
                     } catch(e) {
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
-                        alert("连接请求失败。请检查您的钱包插件是否已解锁或是否拒绝了授权。");
+                        alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
                     }
                 },
 
@@ -272,7 +253,6 @@
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    // 注意：插件钱包通常没有 API 主动断开连接，只能移除应用端的状态。
                 },
                 
                 // --- 其他 DApp 逻辑 (保持不变) ---
