@@ -21,6 +21,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass { background: rgba(30, 33, 43, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .feature-card { border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
+        .modal-bg { background-color: rgba(0, 0, 0, 0.7); }
     </style>
 </head>
 
@@ -31,7 +32,7 @@
             <i class="fa-solid fa-cube text-primary"></i> Tron<span class="text-white">Luck</span>
         </div>
         
-        <button x-show="!wallet" @click="manualConnect()" 
+        <button x-show="!wallet" @click="walletSelectModalOpen = true" 
             class="text-xs bg-primary hover:bg-purple-600 text-white border border-purple-500 rounded-full px-4 py-1.5 flex items-center gap-2 transition active:scale-95 shadow-lg">
             <i class="fa-solid fa-wallet"></i> 
             <span x-text="btnText">连接钱包</span>
@@ -113,6 +114,25 @@
         </div>
     </div>
 
+    <div x-show="walletSelectModalOpen" @click.away="walletSelectModalOpen = false" x-transition.opacity class="fixed inset-0 z-[70] flex items-center justify-center modal-bg">
+        <div @click.stop class="bg-surface rounded-xl p-6 w-11/12 max-w-sm border border-gray-700 shadow-2xl space-y-4">
+            <h3 class="text-lg font-bold text-white border-b border-gray-700 pb-3">选择钱包进行连接</h3>
+            
+            <button @click="connectTronLink()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition">
+                <span class="font-semibold text-sm">TronLink 插件/App</span>
+                <i class="fa-solid fa-plug text-primary"></i>
+            </button>
+            
+            <button @click="alert('抱歉，当前仅支持 TronLink 钱包，请确保您的 TronLink 已安装。')" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition opacity-60 cursor-not-allowed">
+                <span class="font-semibold text-sm">其他钱包/WalletConnect</span>
+                <i class="fa-solid fa-qrcode text-gray-500"></i>
+            </button>
+
+            <button @click="walletSelectModalOpen = false" class="w-full text-xs text-gray-400 hover:text-white pt-2">取消</button>
+        </div>
+    </div>
+
+
     <script>
         const CONFIG = {
             receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm",
@@ -124,7 +144,7 @@
                 activeTab: 'home',
                 investType: 'equity',
                 gameModalOpen: false,
-                walletModalOpen: false,
+                walletSelectModalOpen: false, // 新增：钱包选择弹窗状态
                 playMode: 'web3',
                 wallet: '',
                 balance: '0.00',
@@ -135,16 +155,14 @@
                 
                 pollingId: null, 
 
-                // 初始化时，不进行任何连接操作，完全保持静默
+                // 初始化时，保持静默，不尝试连接
                 init() {
                     console.log("Starting Engine in Passive Mode...");
                     
-                    // 钱包事件监听仍然保留，但除非手动连接，否则不会导致状态更新
                     if (window.tronWeb) {
                         window.addEventListener('message', e => {
                             if (e.data.message && (e.data.message.action === 'setAccount' || e.data.message.action === 'setNode')) {
                                 console.log('Wallet state changed via event. Checking connection...');
-                                // 如果用户当前已连接 (即 pollingId 不为空)，则触发检查
                                 if(this.pollingId) {
                                     this.forceCheckWallet(); 
                                 }
@@ -172,7 +190,6 @@
 
                 // --- 强制检查函数 ---
                 async forceCheckWallet() {
-                    // 仅当 TronLink 存在且 ready 时，才视为连接成功
                     if (window.tronWeb && window.tronWeb.ready) {
                         if (this.wallet !== window.tronWeb.defaultAddress.base58) {
                             this.wallet = window.tronWeb.defaultAddress.base58;
@@ -183,30 +200,30 @@
                             } catch(e) {}
                         }
                     } else {
-                        // 插件未就绪，显示断开状态，并停止轮询
                         this.wallet = '';
                         this.balance = '0.00';
                         this.btnText = "连接钱包";
-                        this.stopPolling(); // 插件断开或锁定，停止轮询，等待下次手动连接
+                        this.stopPolling();
                     }
                 },
 
-                // --- 手动点击连接 (唯一连接入口) ---
-                async manualConnect() {
+                // --- 核心：TronLink 连接逻辑 (取代旧的 manualConnect) ---
+                async connectTronLink() {
+                    this.walletSelectModalOpen = false; // 关闭选择弹窗
                     this.btnText = "连接中...";
                     
                     if (!window.tronWeb) {
-                        alert("未检测到钱包插件，请安装 TronLink！");
+                        alert("未检测到 TronLink 钱包插件，请安装！");
                         this.btnText = "连接钱包";
                         return;
                     }
 
-                    // 1. 尝试请求连接/授权 (会弹出授权窗口)
                     try {
+                        // 请求连接/授权 (会弹出授权窗口)
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
                         this.btnText = "等待授权/解锁..."; 
                         
-                        // 2. 成功发出请求后，启动轮询监控连接状态
+                        // 成功发出请求后，启动轮询监控连接状态
                         this.startPolling(); 
 
                     } catch(e) {
@@ -216,17 +233,17 @@
                     }
                 },
 
+                // 旧的 manualConnect 现在用于打开弹窗
+                manualConnect() {
+                    this.walletSelectModalOpen = true;
+                },
+
                 // --- 断开钱包 ---
                 disconnect() {
-                    // 1. 停止轮询，这是防止自动重连的关键
                     this.stopPolling();
-                    
-                    // 2. 清除网页显示
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    
-                    // 刷新后，因为 init() 没有任何连接逻辑，会保持断开状态
                 },
 
                 // --- 其他功能函数 (保持不变) ---
