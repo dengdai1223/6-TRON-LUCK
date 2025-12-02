@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TronLuck | AAAA去中心化游戏金融协议！！！！</title>
     
-    <link rel="manifest" href="https://dengdai1223.github.io/6-TRON-LUCK/manifest.json">
+    <!-- 修复：使用相对路径，解决 CORS 跨域报错 -->
+    <link rel="manifest" href="manifest.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -35,7 +36,7 @@
         <button x-show="!wallet" @click="walletSelectModalOpen = true" 
             class="text-xs bg-primary hover:bg-purple-600 text-white border border-purple-500 rounded-full px-4 py-1.5 flex items-center gap-2 transition active:scale-95 shadow-lg">
             <i class="fa-solid fa-wallet"></i> 
-            <span x-text="btnText">AAA连接钱包AAA</span>
+            <span x-text="btnText">连接钱包</span>
         </button>
 
         <div x-show="wallet" class="flex items-center gap-2 bg-surface border border-gray-700 rounded-full pl-3 pr-1 py-1">
@@ -121,14 +122,14 @@
             <button @click="connectWallet()" class="w-full flex items-center justify-between bg-black/30 hover:bg-black/50 p-3 rounded-lg border border-gray-700 transition">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center"><i class="fa-solid fa-plug text-sm"></i></div>
-                    <span class="font-semibold text-sm">TronLink (推荐)</span>
+                    <span class="font-semibold text-sm">TronLink / 钱包插件</span>
                 </div>
                 <i class="fa-solid fa-arrow-right text-primary"></i>
             </button>
             
             <div class="bg-gray-900 p-3 rounded-lg text-xs text-gray-400 mt-4 border border-gray-700">
                 <i class="fa-solid fa-info-circle text-purple-400 mr-1"></i>
-                TokenPocket/OKX Wallet 等其他 TRON 钱包插件若想连接，需要确保**它们是浏览器中唯一激活的 TRON 插件**。
+                提示：若点击无反应，请尝试暂时禁用其他钱包插件（如Metamask/OKX），只保留 TronLink。
             </div>
 
             <button @click="walletSelectModalOpen = false" class="w-full text-xs text-gray-400 hover:text-white pt-2">取消</button>
@@ -155,131 +156,144 @@
                 investAmount: '',
                 btnText: '连接钱包',
                 config: CONFIG,
-                
                 pollingId: null, 
                 
-                // 初始化
                 init() {
-                    console.log("Starting Engine in Passive Mode...");
-                    
-                    if (window.tronWeb) {
-                        // 监听 TronLink/兼容钱包的账户或网络变化事件
-                        window.addEventListener('message', e => {
-                            if (e.data.message && (e.data.message.action === 'setAccount' || e.data.message.action === 'setNode')) {
-                                console.log('Wallet state changed via event. Checking connection...');
-                                if(this.pollingId) {
-                                    this.forceCheckWallet(); 
-                                }
-                            }
-                        });
-                    }
-                    // 页面加载后自动尝试检查连接状态
+                    console.log("App Initialized. Waiting for wallet injection...");
+                    // 页面加载后自动开启检测，但不自动弹窗
                     this.startPolling();
                 },
 
-                // --- 轮询开关 --- 
                 startPolling() {
                     if (this.pollingId) return; 
-                    // 每隔 1 秒检查一次钱包状态
+                    // 轮询检查钱包状态
                     this.pollingId = setInterval(() => {
                         this.forceCheckWallet();
-                    }, 1000);
-                    console.log("Wallet Polling started.");
+                    }, 1500);
                 },
                 stopPolling() {
                     if (this.pollingId) {
                         clearInterval(this.pollingId);
                         this.pollingId = null; 
-                        console.log("Wallet Polling stopped.");
                     }
                 },
 
-
-                // --- 强制检查函数 (通用检查) ---
+                // 核心：钱包状态检查
                 async forceCheckWallet() {
-                    // 检查 window.tronWeb 是否存在且已准备好 (这是所有 TRON 插件的统一入口)
-                    if (window.tronWeb && window.tronWeb.ready) {
-                        const currentAddr = window.tronWeb.defaultAddress.base58;
-
-                        if (this.wallet !== currentAddr) {
-                            this.wallet = currentAddr;
-                            this.btnText = "已连接";
-                            try {
-                                const bal = await window.tronWeb.trx.getBalance(this.wallet);
-                                this.balance = (bal / 1e6).toFixed(2);
-                                this.startPolling(); 
-                            } catch(e) {
-                                this.balance = '?.??';
-                                console.error("无法获取余额:", e);
+                    // 只要有 tronWeb 对象，就尝试读取
+                    if (window.tronWeb) {
+                        // 兼容性检查：有些钱包 ready 属性不稳定
+                        const isReady = window.tronWeb.ready;
+                        
+                        if (isReady && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58) {
+                            const currentAddr = window.tronWeb.defaultAddress.base58;
+                            
+                            // 如果地址变了，或者之前没连上
+                            if (this.wallet !== currentAddr) {
+                                this.wallet = currentAddr;
+                                this.btnText = "已连接";
+                                try {
+                                    const bal = await window.tronWeb.trx.getBalance(this.wallet);
+                                    this.balance = (bal / 1e6).toFixed(2);
+                                } catch(e) {
+                                    console.warn("余额获取失败，可能网络问题", e);
+                                }
                             }
+                        } else {
+                            // 虽然有插件，但用户可能锁定了钱包或没登入
+                            // 这里不做清除操作，防止闪烁，只在 disconnect 时清除
                         }
-                    } else {
-                        // 如果 window.tronWeb 不存在或未准备好
-                        if (this.wallet) {
-                            this.wallet = '';
-                            this.balance = '0.00';
-                            this.btnText = "连接钱包";
-                        }
-                    }
+                    } 
                 },
 
-                // 🌟 通用连接入口 (现在仅针对 TronLink)
+                // 🌟 修复后的连接逻辑：兼容各种“脏”环境
                 async connectWallet() {
                     this.walletSelectModalOpen = false;
                     this.btnText = "连接中...";
                     
                     if (!window.tronWeb) {
-                        alert("未检测到 TronLink 钱包插件。请确保您已安装并切换到 TRON 网络。");
+                        alert("未检测到 TronLink 或兼容钱包。请在支持波场 DApp 的环境打开，或安装 TronLink 插件。");
                         this.btnText = "连接钱包";
                         return;
                     }
 
                     try {
-                        // 请求连接/授权
-                        await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                        this.btnText = "等待授权/解锁..."; 
-                        this.startPolling(); 
+                        // 方案 A: 标准 TronLink 请求 (最新标准)
+                        if (window.tronLink && window.tronLink.request) {
+                            console.log("尝试方式 A: window.tronLink.request");
+                            await window.tronLink.request({ method: 'tron_requestAccounts' });
+                        } 
+                        // 方案 B: 通用 Request (部分钱包)
+                        else if (window.tronWeb.request) {
+                            console.log("尝试方式 B: window.tronWeb.request");
+                            await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                        }
+                        // 方案 C: 降级处理 (针对 OKX 劫持 / 旧版环境)
+                        // 如果没有 request 方法，直接检查 ready 状态
+                        else {
+                            console.log("尝试方式 C: 降级检查 (Legacy)");
+                            if (!window.tronWeb.ready) {
+                                alert("检测到钱包插件，但未解锁或未连接。请打开您的钱包插件并登录。");
+                                this.btnText = "连接钱包";
+                                return;
+                            }
+                        }
+
+                        // 连接流程走完后，强制刷新一次状态
+                        setTimeout(() => this.forceCheckWallet(), 500);
 
                     } catch(e) {
-                        console.error("连接请求失败:", e.message);
+                        console.error("连接过程报错:", e);
+                        // 错误代码 4001 代表用户拒绝
+                        if (e.code === 4001) {
+                            alert("您取消了连接请求。");
+                        } else {
+                            // 很多时候报错是因为环境冲突，依然尝试强制读取一下
+                            console.log("尝试忽略报错，强制读取状态...");
+                            this.forceCheckWallet();
+                        }
                         this.btnText = "连接钱包";
-                        alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
                     }
                 },
 
-                // --- 断开钱包 (通用) ---
                 disconnect() {
-                    this.stopPolling();
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
+                    // 不停止轮询，这样用户如果再手动解锁钱包，能自动连上
                 },
                 
-                // --- 其他 DApp 逻辑 (保持不变) ---
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
                         const box = document.getElementById("qrcode-container");
-                        if(box) { box.innerHTML = ""; new QRCode(box, { text: CONFIG.receiveAddr, width: 140, height: 140 }); }
+                        if(box) { 
+                            box.innerHTML = ""; 
+                            new QRCode(box, { text: CONFIG.receiveAddr, width: 140, height: 140 }); 
+                        }
                     }, 100);
                 },
                 shortAddr(addr) { return addr ? addr.slice(0,4) + '...' + addr.slice(-4) : ''; },
                 copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
+                
                 async doBet(guess) {
                     if(!this.wallet) return alert("请先连接钱包！！！！");
-                    if (!window.tronWeb) return alert("交易失败：未检测到 TRON 钱包 Web3 对象。请确保插件已连接。");
+                    // 二次检查对象
+                    if (!window.tronWeb || !window.tronWeb.trx) return alert("钱包环境异常，请刷新页面重试。");
                     
                     let amountSun = window.tronWeb.toSun(this.betAmount);
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
                     try {
                         const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
-                        alert("✅ 下注成功！！！！");
-                    } catch(e) { alert("交易取消"); }
+                        alert("✅ 下注成功！交易哈希: " + res.result ? "发送成功" : "已提交");
+                    } catch(e) { 
+                        console.error(e);
+                        alert("交易取消或失败"); 
+                    }
                 },
+                
                 async doInvest() {
                     if(!this.wallet) return alert("请先连接钱包");
-                    if (!window.tronWeb) return alert("交易失败：未检测到 TRON 钱包 Web3 对象。请确保插件已连接。");
-
                     if(!this.investAmount) return alert("请输入金额");
                     try {
                         let contract = await window.tronWeb.contract().at(CONFIG.contractAddr);
