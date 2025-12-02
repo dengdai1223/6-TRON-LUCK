@@ -123,6 +123,7 @@
                 },
 
                 // 🌟 连接钱包的核心函数 (已修复超时逻辑) 🌟
+                // 🌟 优化的通用连接入口 (最终稳定版 - 解决 request is not a function) 🌟
                 async connectWallet() {
                     this.stopTronWebCheck(); // 尝试连接前先停止检查
                     
@@ -136,40 +137,58 @@
                         return;
                     }
                     
-                    this.startTronWebCheck(); 
+                    // 【关键修改】等待 TronWeb 彻底就绪，并检查 request 方法是否可用
+                    const maxRetries = 10;
+                    let retries = 0;
+                    
+                    // 检查 TronWeb 是否完全就绪
+                    while ((!window.tronWeb || !window.tronWeb.ready || typeof window.tronWeb.request !== 'function') && retries < maxRetries) {
+                        this.btnText = `正在等待钱包同步 (${retries + 1}/${maxRetries})...`;
+                        await delay(300); // 每次等待 300 毫秒
+                        retries++;
+                    }
+                
+                    if (retries === maxRetries) {
+                        this.btnText = "连接钱包";
+                        alert("钱包 Web3 对象加载失败。请刷新页面，并确保只启用了 TronLink 插件。");
+                        this.startTronWebCheck();
+                        return;
+                    }
+                
+                    this.startTronWebCheck(); // 重新启动稳定检查
                     
                     try {
-                        // 1. 请求连接/授权，弹窗在此刻弹出
+                        this.btnText = "请求授权...";
+                        
+                        // 1. 调用 request 方法
                         const requestResult = await window.tronWeb.request({ method: 'tron_requestAccounts' }); 
                         
-                        // 2. 检查请求结果 (如果有错误)
                         if (requestResult && requestResult.code && requestResult.code !== 200) {
                             throw new Error(requestResult.message || "用户取消或拒绝授权");
                         }
                         
                         this.btnText = "等待同步...";
                         
-                        // 3. 关键修改：等待 1 秒钟，让插件有足够时间将地址写入 window.tronWeb
+                        // 2. 延迟等待 1 秒，确保地址被注入
                         await delay(1000); 
-
-                        // 4. 强制执行一次同步检查
+                
+                        // 3. 强制执行一次同步检查
                         await this.forceCheckWallet(); 
                         
-                        // 5. 最终状态判断
+                        // 4. 最终状态判断
                         if (!this.wallet) {
                             this.btnText = "连接钱包";
                             alert("钱包连接超时或用户取消授权。请检查您的 TronLink 插件是否已解锁，并且授权页面已被确认。");
                         } else {
                             console.log("Wallet connected successfully after authorization and delay.");
-                            // 成功后，btnText 会在 forceCheckWallet 中被更新为 "已连接"
                         }
-
+                
                     } catch(e) {
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
                         alert("连接请求失败：" + e.message);
                     }
-                },
+                }
 
 
                 // --- 断开钱包 (通用) ---
