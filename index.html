@@ -11,7 +11,6 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <!-- UI 主题配置 -->
     <script>
         tailwind.config = {
             theme: {
@@ -32,23 +31,40 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .glass { background: rgba(30, 33, 43, 0.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass { background: rgba(30, 33, 43, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .feature-card { border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
     </style>
 </head>
 
 <body x-data="app()" class="flex flex-col h-screen overflow-hidden">
 
-    <!-- 顶部栏 -->
+    <!-- 顶部栏 (UI升级：支持显示余额和断开) -->
     <header class="h-14 px-4 flex items-center justify-between glass fixed top-0 w-full z-50">
         <div class="font-bold text-lg tracking-wider flex items-center gap-2">
             <i class="fa-solid fa-cube text-primary"></i> Tron<span class="text-white">Luck</span>
         </div>
-        <button @click="connectWallet()" 
-            class="text-xs bg-gray-800 border border-gray-700 rounded-full px-3 py-1.5 flex items-center gap-2 transition active:scale-95">
-            <div class="w-2 h-2 rounded-full" :class="wallet ? 'bg-green-500' : 'bg-gray-500'"></div>
-            <span x-text="wallet ? shortAddr(wallet) : '连接钱包'"></span>
+        
+        <!-- 未连接状态 -->
+        <button x-show="!wallet" @click="connectWallet()" 
+            class="text-xs bg-primary hover:bg-purple-600 text-white border border-purple-500 rounded-full px-4 py-1.5 flex items-center gap-2 transition active:scale-95 shadow-lg shadow-purple-900/50">
+            <i class="fa-solid fa-wallet"></i> 连接钱包
         </button>
+
+        <!-- 已连接状态 (显示余额 + 地址 + 断开) -->
+        <div x-show="wallet" class="flex items-center gap-2 bg-surface border border-gray-700 rounded-full pl-3 pr-1 py-1">
+            <!-- 余额 -->
+            <div class="flex items-center gap-1">
+                <span class="text-green-400 font-bold text-xs" x-text="balance">0</span>
+                <span class="text-[10px] text-gray-500">TRX</span>
+            </div>
+            <div class="w-[1px] h-4 bg-gray-700 mx-1"></div>
+            <!-- 地址 -->
+            <span class="text-xs text-gray-300 font-mono" x-text="shortAddr(wallet)"></span>
+            <!-- 断开按钮 -->
+            <button @click="disconnect()" class="w-6 h-6 rounded-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition ml-1" title="断开连接">
+                <i class="fa-solid fa-power-off text-[10px]"></i>
+            </button>
+        </div>
     </header>
 
     <!-- 主内容区 -->
@@ -84,23 +100,6 @@
                     <i class="fa-solid fa-wallet text-2xl text-purple-400 mb-2"></i>
                     <h4 class="font-bold text-sm">资金在您手中</h4>
                     <p class="text-[10px] text-gray-400 mt-1">非托管式游戏。不下注时资金100%在您的钱包。</p>
-                </div>
-            </div>
-
-            <!-- 路线图 -->
-            <div>
-                <h3 class="font-bold text-lg mb-4">🗺️ 路线图</h3>
-                <div class="space-y-0 relative border-l border-gray-700 ml-3">
-                    <div class="mb-6 ml-6 relative">
-                        <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-primary border-2 border-bg"></span>
-                        <h4 class="font-bold text-white text-sm">Phase 1: 协议启动</h4>
-                        <p class="text-xs text-gray-500">上线哈希猜单双，部署众筹合约。</p>
-                    </div>
-                    <div class="ml-6 relative">
-                        <span class="absolute -left-[31px] w-4 h-4 rounded-full bg-gray-600 border-2 border-bg"></span>
-                        <h4 class="font-bold text-gray-400 text-sm">Phase 2: SunPump 发币</h4>
-                        <p class="text-xs text-gray-500">发行治理代币，开启积分空投。</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -163,6 +162,12 @@
             <div class="surface rounded-2xl p-6 text-center mb-6 border border-gray-800">
                 <div class="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl">👾</div>
                 <h2 x-text="wallet ? shortAddr(wallet) : '未连接钱包'" class="font-bold text-lg"></h2>
+                
+                <!-- 余额显示区 -->
+                <div x-show="wallet" class="mt-2 text-sm text-gray-400">
+                    余额: <span class="text-green-400 font-bold" x-text="balance"></span> TRX
+                </div>
+
                 <div class="mt-4 grid grid-cols-2 gap-4">
                     <div class="bg-black/20 p-2 rounded"><div class="text-lg font-bold text-primary">0</div><div class="text-xs text-gray-500">积分 (Points)</div></div>
                     <div class="bg-black/20 p-2 rounded"><div class="text-lg font-bold text-green-400">0</div><div class="text-xs text-gray-500">邀请人数</div></div>
@@ -173,6 +178,7 @@
                 <div class="surface p-4 rounded-xl flex justify-between text-sm font-bold"><span>📖 帮助文档 / FAQ</span><i class="fa-solid fa-chevron-right text-gray-600"></i></div>
             </div>
         </div>
+
     </main>
 
     <!-- 底部导航 -->
@@ -206,13 +212,11 @@
         </div>
         
         <div class="flex-1 overflow-y-auto p-4 space-y-6">
-            <!-- 模式切换 -->
             <div class="flex bg-gray-900 p-1 rounded-lg mb-4">
                 <button @click="playMode='web3'" :class="playMode==='web3' ? 'bg-gray-700 text-white' : 'text-gray-500'" class="flex-1 py-2 text-xs font-bold rounded">一键下注 (Web3)</button>
                 <button @click="playMode='qr'" :class="playMode==='qr' ? 'bg-gray-700 text-white' : 'text-gray-500'" class="flex-1 py-2 text-xs font-bold rounded">扫码转账</button>
             </div>
 
-            <!-- Web3下注 -->
             <div x-show="playMode==='web3'" class="space-y-6 text-center">
                 <div class="relative">
                     <input type="number" x-model="betAmount" class="bg-black/30 border border-gray-700 rounded-xl px-4 py-4 text-2xl text-center text-white w-full font-bold focus:border-primary outline-none">
@@ -231,7 +235,6 @@
                 </div>
             </div>
 
-            <!-- 扫码下注 -->
             <div x-show="playMode==='qr'" class="text-center">
                 <div class="bg-white p-2 rounded-xl w-40 h-40 mx-auto mb-4" id="qrcode-container"></div>
                 <div class="bg-gray-800 p-3 rounded mb-4 text-xs font-mono text-gray-300 break-all" x-text="config.receiveAddr"></div>
@@ -245,15 +248,10 @@
 
     <!-- 逻辑脚本 -->
     <script>
-        // --- 核心配置：根据你的要求已填好 ---
         const CONFIG = {
-            receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm", // 热钱包收款
-            contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"  // 众筹合约
+            receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm",
+            contractAddr: "THPWTQ8rYTAMb4UqCmksdswTXWksssss"
         };
-
-
-
-
 
         function app() {
             return {
@@ -262,80 +260,77 @@
                 gameModalOpen: false,
                 playMode: 'web3',
                 wallet: '',
+                balance: '0.00',
                 betAmount: 10,
                 investAmount: '',
                 config: CONFIG,
                 
-                // --- 初始化：自动启动检测 ---
-                init() { 
-                    console.log("App 初始化...");
-                    // 页面加载后，尝试自动检测钱包
-                    // 有些钱包注入慢，我们给它 3 秒缓冲
-                    let tries = 0;
-                    const timer = setInterval(() => {
-                        this.checkWallet();
-                        tries++;
-                        if (this.wallet || tries > 10) clearInterval(timer);
-                    }, 500); 
+                // --- 初始化逻辑 ---
+                init() {
+                    // 轮询检查钱包注入状态 (每500毫秒查一次，直到连上)
+                    let checkInterval = setInterval(() => {
+                        this.autoConnect();
+                    }, 1000);
+                    
+                    // 监听账号切换
+                    window.addEventListener('message', (e) => {
+                        if (e.data.message && e.data.message.action == "accountsChanged") {
+                            this.autoConnect();
+                        }
+                    });
                 },
 
-                // --- 核心：万能连接逻辑 (修复版) ---
-                async connectWallet() {
-                    console.log("正在尝试连接钱包...");
-
-                    // 1. 检测是否安装了钱包插件
-                    if (!window.tronWeb) {
-                        alert("⚠️ 未检测到波场钱包！\n\n电脑端：请安装 TronLink 插件。\n手机端：请在 TokenPocket/ImToken 的【发现】浏览器中打开本网页。");
-                        return;
-                    }
-
-                    // 2. 尝试请求账户授权 (新版 TronLink 标准)
-                    try {
-                        if (window.tronWeb.request) {
-                            console.log("尝试 request 请求...");
-                            const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                            if (res.code === 200) {
-                                // 连接成功
-                                this.wallet = window.tronWeb.defaultAddress.base58;
-                                return; // 结束
-                            }
-                        }
-                    } catch (e) {
-                        console.error("request 连接失败，尝试旧版方法", e);
-                    }
-
-                    // 3. 兜底方案 (旧版检测逻辑 & TP钱包逻辑)
-                    // 如果钱包已经解锁，tronWeb.ready 会变成 true
-                    if (window.tronWeb.ready && window.tronWeb.defaultAddress.base58) {
+                // --- 自动连接与状态保持 ---
+                async autoConnect() {
+                    if(window.tronWeb && window.tronWeb.ready) {
                         this.wallet = window.tronWeb.defaultAddress.base58;
-                    } else {
-                        // 如果有 tronWeb 但没 ready，说明可能没解锁
-                        alert("⚠️ 连接失败或钱包未解锁！\n\n请点击浏览器右上角的钱包插件，输入密码解锁后，刷新页面重试。");
+                        // 获取余额
+                        try {
+                            const bal = await window.tronWeb.trx.getBalance(this.wallet);
+                            this.balance = (bal / 1e6).toFixed(2);
+                        } catch(e) { console.error("获取余额失败", e); }
                     }
                 },
                 
-                // --- 被动检查状态 ---
-                checkWallet() {
-                    // 如果已经连接过，自动同步状态
-                    if(window.tronWeb && window.tronWeb.ready) {
-                        this.wallet = window.tronWeb.defaultAddress.base58;
+                // --- 手动连接按钮 ---
+                async connectWallet() {
+                    if (window.tronWeb) {
+                        try {
+                            const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                            if(res.code === 200) {
+                                this.autoConnect();
+                            }
+                        } catch(e) {
+                            // 兼容旧版 TronLink
+                            if(!window.tronWeb.ready) {
+                                alert("请在钱包插件中输入密码解锁！");
+                            } else {
+                                this.autoConnect();
+                            }
+                        }
+                    } else {
+                        alert("请安装 TronLink 插件或在 TokenPocket 中打开");
                     }
                 },
 
-                // 其他函数保持不变...
+                // --- 手动断开 (清除本地状态) ---
+                disconnect() {
+                    if(confirm("确定要断开连接吗？")) {
+                        this.wallet = '';
+                        this.balance = '0.00';
+                        // 注意：网页无法强制让 TronLink 插件登出，只能清除网页端的显示
+                    }
+                },
+                
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
-                        const container = document.getElementById("qrcode-container");
-                        if(container) {
-                            container.innerHTML = "";
-                            new QRCode(container, { text: CONFIG.receiveAddr, width: 140, height: 140 });
-                        }
+                        document.getElementById("qrcode-container").innerHTML = "";
+                        new QRCode(document.getElementById("qrcode-container"), { text: CONFIG.receiveAddr, width: 140, height: 140 });
                     }, 100);
                 },
-                
-                shortAddr(addr) { return addr ? addr.slice(0,4) + '...' + addr.slice(-4) : ''; },
-                
+
+                shortAddr(addr) { return addr.slice(0,4) + '...' + addr.slice(-4); },
                 copyAddr() { navigator.clipboard.writeText(CONFIG.receiveAddr); alert("地址已复制"); },
 
                 async doBet(guess) {
@@ -344,10 +339,10 @@
                     let finalAmount = parseInt(amountSun) + (guess === 1 ? 1 : 2);
                     try {
                         const res = await window.tronWeb.trx.sendTransaction(CONFIG.receiveAddr, finalAmount);
-                        alert("✅ 下注成功！等待派奖。");
+                        alert("✅ 下注交易已发送！\n等待区块确认后自动派奖。");
                     } catch(e) {
                         console.error(e);
-                        alert("交易取消或失败: " + e);
+                        alert("交易取消");
                     }
                 },
 
@@ -365,12 +360,6 @@
                 }
             }
         }
-
-
-
-
-        
     </script>
 </body>
-
 </html>
