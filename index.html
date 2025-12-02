@@ -133,12 +133,12 @@
                 btnText: '连接钱包',
                 config: CONFIG,
                 
-                // 新增：用于存储 setInterval ID，用于控制轮询开关
                 pollingId: null, 
+                
+                // 核心持久化状态变量：用户是否主动连接过 (用于控制刷新后是否自动重连)
+                isUserConnected: false, 
 
-                // 新增：启动轮询的函数
                 startPolling() {
-                    // 如果已经有轮询，则不重复启动
                     if (this.pollingId) return; 
 
                     this.pollingId = setInterval(() => {
@@ -150,37 +150,42 @@
                 init() {
                     console.log("Starting Engine...");
                     
-                    // 1. 钱包事件监听 (更优雅的解决方案)
+                    // 1. 从 LocalStorage 读取用户连接状态
+                    this.isUserConnected = localStorage.getItem('isWalletConnected') === 'true';
+
+                    // 2. 钱包事件监听
                     if (window.tronWeb) {
                         window.addEventListener('message', e => {
-                            // 监听账户变化或连接成功
                             if (e.data.message && (e.data.message.action === 'setAccount' || e.data.message.action === 'setNode')) {
                                 console.log('Wallet state updated via event.');
-                                this.forceCheckWallet(); // 触发一次检查
+                                // 只有在用户主动连接状态下，事件更新才应该触发连接状态检查
+                                if(this.isUserConnected) {
+                                    this.forceCheckWallet(); 
+                                }
                             }
                         });
                     }
                     
-                    // 2. 启动轮询引擎
-                    this.startPolling();
+                    // 3. 如果用户上次是连接状态，启动轮询引擎
+                    if(this.isUserConnected) {
+                        this.startPolling();
+                    }
                 },
 
-                // --- 强制检查函数 ---
+                // --- 强制检查函数 (仅在 isUserConnected 为 true 时才会自动连接) ---
                 async forceCheckWallet() {
-                    // 只有当 window.tronWeb 存在且 ready 时，才视为连接成功
-                    if (window.tronWeb && window.tronWeb.ready) {
-                        // 如果当前显示的地址不对，立马更新
+                    // 只有当用户主动连接且 TronLink 存在且 ready 时，才自动更新状态
+                    if (this.isUserConnected && window.tronWeb && window.tronWeb.ready) {
                         if (this.wallet !== window.tronWeb.defaultAddress.base58) {
                             this.wallet = window.tronWeb.defaultAddress.base58;
                             this.btnText = "已连接";
-                            // 顺便更新余额
                             try {
                                 const bal = await window.tronWeb.trx.getBalance(this.wallet);
                                 this.balance = (bal / 1e6).toFixed(2);
                             } catch(e) {}
                         }
                     } else {
-                        // 如果不 ready，说明没解锁或者没安装，保持断开状态
+                        // 插件未就绪或用户已断开，显示断开状态
                         this.wallet = '';
                         this.balance = '0.00';
                         if (this.btnText !== "连接中...") {
@@ -198,45 +203,53 @@
                         this.btnText = "连接钱包";
                         return;
                     }
+                    
+                    // 1. 设置持久化状态为已连接
+                    this.isUserConnected = true;
+                    localStorage.setItem('isWalletConnected', 'true');
 
-                    // 1. 如果已经 Ready，先确保轮询在跑
+                    // 2. 如果已经 Ready，先启动轮询并更新
                     if (window.tronWeb.ready) {
-                        this.startPolling(); // 确保轮询在跑
+                        this.startPolling(); 
                         this.forceCheckWallet();
                         this.btnText = "已连接"; 
                         return;
                     }
 
-                    // 2. 尝试请求连接/授权
+                    // 3. 尝试请求连接/授权
                     try {
-                        // 这将触发钱包插件的授权或解锁弹窗
                         await window.tronWeb.request({ method: 'tron_requestAccounts' });
                         this.btnText = "等待授权/解锁..."; 
                         
-                        // 成功发出请求后，确保轮询启动，以便在授权成功后立即更新状态
+                        // 成功发出请求后，启动轮询监控连接状态
                         this.startPolling(); 
 
                     } catch(e) {
-                        // 请求失败 (用户拒绝、或钱包锁定但未弹出提示)
                         console.error("连接请求失败:", e.message);
                         this.btnText = "连接钱包";
+                        // 失败时，清除持久化状态，等待下次手动连接
+                        this.isUserConnected = false;
+                        localStorage.setItem('isWalletConnected', 'false');
                         alert("连接请求失败。请检查您的 TronLink 插件是否已解锁或是否拒绝了授权。");
                     }
                 },
 
                 disconnect() {
-                    // 1. 停止轮询，这是解决自动重连的关键
+                    // 1. 清除持久化状态，确保刷新后不自动连接
+                    this.isUserConnected = false;
+                    localStorage.setItem('isWalletConnected', 'false');
+
+                    // 2. 停止轮询，防止它立即重连
                     if (this.pollingId) {
                         clearInterval(this.pollingId);
                         this.pollingId = null; 
                         console.log("Polling stopped.");
                     }
 
-                    // 2. 这是一个软断开，只清除网页显示
+                    // 3. 清除网页显示
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    // 真正的断开操作（清除网站授权）需要在钱包插件中进行
                 },
 
                 openGame(type) {
